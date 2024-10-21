@@ -34,6 +34,7 @@ export class Issue extends SuperSupabase {
   }
   async findSimilarIssues(plaintext: string, threshold: number, currentId: string): Promise<IssueSimilaritySearchResult[] | null> {
     const embedding = await this.context.adapters.voyage.embedding.createEmbedding({ text: plaintext, prompt: "This is a query for the stored documents:" });
+    plaintext = plaintext.replace(/'/g, "''").replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/%/g, "\\%").replace(/_/g, "\\_");
     const { data, error } = await this.supabase.rpc("find_similar_issue_ftse", {
       current_id: currentId,
       query_text: plaintext,

@@ -27,7 +27,7 @@ export type LinkedIssues = {
 };
 
 export type SimplifiedComment = {
-  user: User | null;
+  user: User | Partial<User>;
   body: string;
   id: string;
   org: string;
@@ -37,7 +37,7 @@ export type SimplifiedComment = {
 
 export type FetchedCodes = {
   body: string;
-  user: User | null;
+  user: User | Partial<User>;
   issueUrl: string;
   id: string;
   org: string;

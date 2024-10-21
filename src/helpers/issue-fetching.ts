@@ -87,7 +87,6 @@ export async function fetchLinkedIssues(params: FetchParams) {
   for (const comment of comments) {
     const foundIssues = idIssueFromComment(comment.body);
     const foundCodes = comment.body ? await fetchCodeLinkedFromIssue(comment.body, params.context, comment.issueUrl) : [];
-
     if (foundIssues) {
       for (const linkedIssue of foundIssues) {
         const linkedKey = createKey(linkedIssue.url, linkedIssue.issueNumber);

@@ -144,7 +144,6 @@ export async function fetchCodeLinkedFromIssue(
             path: parsedUrl.path,
           });
         }
-
         if ("content" in response.data) {
           const content = Buffer.from(response.data.content, "base64").toString();
           return { body: content, id: parsedUrl.path };
@@ -163,7 +162,7 @@ export async function fetchCodeLinkedFromIssue(
       repo: context.payload.repository.name,
       issueNumber: parseInt(issue.match(/\/issues\/(\d+)/)?.[1] || "0", 10),
       issueUrl: url,
-      user: null,
+      user: context.payload.sender,
     }));
 }
 

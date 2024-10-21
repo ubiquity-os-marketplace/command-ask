@@ -76,7 +76,6 @@ export function streamlineComments(comments: SimplifiedComment[]) {
     if (user?.type === "Bot") continue;
     const key = createKey(url);
     const [owner, repo] = splitKey(key);
-
     if (!streamlined[key]) {
       streamlined[key] = [];
     }

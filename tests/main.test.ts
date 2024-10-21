@@ -163,6 +163,7 @@ describe("Ask plugin tests", () => {
     === Linked Issue #3 Conversation === ubiquity/test-repo #3 ===
 
     4 ubiquity: Just a comment [#1](https://www.github.com/ubiquity/test-repo/issues/1)
+    4 ubiquity: Just a comment [#1](https://www.github.com/ubiquity/test-repo/issues/1)
     === End Linked Issue #3 Conversation ===\n
     `;
 

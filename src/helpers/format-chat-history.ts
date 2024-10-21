@@ -139,10 +139,8 @@ function createComment(comment: StreamlinedComments) {
   if (!comment.comments) {
     return "";
   }
-  // Remove duplicates
-  const uniqueComments = comment.comments.filter((c, i, a) => a.findIndex((cc) => cc.id === c.id) === i);
   // Format comments
-  const formattedComments = uniqueComments.map((c) => `${c.id} ${c.user}: ${c.body}\n`);
+  const formattedComments = comment.comments.map((c) => `${c.id} ${c.user}: ${c.body}\n`);
   return formattedComments.join("");
 }
 

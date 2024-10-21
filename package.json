@@ -39,6 +39,8 @@
     "voyageai": "^0.0.1-5"
   },
   "devDependencies": {
+    "@actions/core": "^1.11.1",
+    "@actions/github": "^6.0.0",
     "@commitlint/cli": "19.3.0",
     "@commitlint/config-conventional": "19.2.2",
     "@cspell/dict-node": "5.0.1",
@@ -66,7 +68,7 @@
     "tsx": "4.15.6",
     "typescript": "5.4.5",
     "typescript-eslint": "7.13.1",
-    "wrangler": "3.60.3"
+    "wrangler": "^3.81.0"
   },
   "lint-staged": {
     "*.ts": [
