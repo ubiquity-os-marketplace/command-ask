@@ -12,7 +12,6 @@ import { bubbleUpErrorComment } from "./errors";
  */
 const callbacks = {
   "issue_comment.created": [processCommentCallback],
-  "pull_request_review_comment.created": [processCommentCallback],
 } as ProxyCallbacks;
 
 export async function callCallbacks<T extends SupportedEvents>(context: Context<T>, eventName: T): Promise<CallbackResult> {

@@ -125,8 +125,6 @@ async function buildTree(
   let issueNumber;
   if ("issue" in context.payload) {
     issueNumber = context.payload.issue.number;
-  } else if ("pull_request" in context.payload) {
-    issueNumber = context.payload.pull_request.number;
   } else {
     issueNumber = undefined;
   }
@@ -508,15 +506,6 @@ export async function buildChatHistoryTree(
   const specAndBodies: Record<string, string> = {};
   const tokenLimits = createDefaultTokenLimits(context);
   const { tree } = await buildTree(context, specAndBodies, maxDepth, tokenLimits, similarIssues, similarComments);
-
-  if (tree && "pull_request" in context.payload) {
-    const { diff_hunk, position, original_position, path, body } = context.payload.comment || {};
-    if (diff_hunk) {
-      tree.body += `\nPrimary Context: ${body || ""}\nDiff: ${diff_hunk}\nPath: ${path || ""}\nLines: ${position || ""}-${original_position || ""}`;
-      tree.comments = tree.comments?.filter((comment) => comment.id !== String(context.payload.comment?.id));
-    }
-  }
-
   return { tree, tokenLimits };
 }
 

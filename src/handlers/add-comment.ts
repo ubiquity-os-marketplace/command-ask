@@ -22,9 +22,7 @@ export async function addCommentToIssue(context: Context, message: string, optio
     if (options?.inReplyTo) {
       let pullNumber: number | undefined;
 
-      if ("pull_request" in payload) {
-        pullNumber = payload.pull_request.number;
-      } else if ("issue" in payload && payload.issue.pull_request) {
+      if ("issue" in payload && payload.issue.pull_request) {
         pullNumber = payload.issue.number;
       } else {
         pullNumber = undefined;
@@ -49,8 +47,6 @@ export async function addCommentToIssue(context: Context, message: string, optio
       let issueNumber: number | undefined;
       if ("issue" in payload) {
         issueNumber = payload.issue.number;
-      } else if ("pull_request" in payload) {
-        issueNumber = payload.pull_request.number;
       } else {
         issueNumber = undefined;
       }

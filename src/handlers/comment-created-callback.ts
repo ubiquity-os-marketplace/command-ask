@@ -5,7 +5,7 @@ import { CallbackResult } from "../types/proxy";
 import { bubbleUpErrorComment, sanitizeMetadata } from "../helpers/errors";
 import { LogReturn } from "@ubiquity-os/ubiquity-os-logger";
 
-export async function processCommentCallback(context: Context<"issue_comment.created" | "pull_request_review_comment.created">): Promise<CallbackResult> {
+export async function processCommentCallback(context: Context<"issue_comment.created">): Promise<CallbackResult> {
   const { logger, command, payload } = context;
   let question = "";
 
