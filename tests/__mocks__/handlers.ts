@@ -1,4 +1,4 @@
-import { http, HttpResponse } from "msw";
+import { http, HttpResponse, graphql } from "msw";
 import { db } from "./db";
 import issueTemplate from "./issue-template";
 
@@ -6,6 +6,135 @@ import issueTemplate from "./issue-template";
  * Intercepts the routes and returns a custom payload
  */
 export const handlers = [
+  // GraphQL handler for fetching comment by ID
+  graphql.query("GetCommentById", ({ variables }) => {
+    // Try to find an issue comment first
+    const comment = db.comments.findFirst({
+      where: { id: { equals: Number(variables.id) } },
+    });
+
+    if (comment) {
+      // If it's an issue comment
+      if (comment.issue_url) {
+        const issue = db.issue.findFirst({
+          where: { number: { equals: comment.issue_number } },
+        });
+
+        return HttpResponse.json({
+          data: {
+            node: {
+              __typename: "IssueComment",
+              id: String(comment.id),
+              body: comment.body,
+              author: {
+                login: comment.user.login,
+              },
+              issue: {
+                id: String(issue?.id),
+                number: issue?.number,
+                title: issue?.title,
+                url: issue?.html_url,
+                repository: {
+                  name: comment.repo,
+                  owner: {
+                    login: comment.owner,
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+      // If it's a pull request review comment
+      else if (comment.pull_request_url) {
+        const pull = db.pull.findFirst({
+          where: { number: { equals: comment.issue_number } },
+        });
+
+        return HttpResponse.json({
+          data: {
+            node: {
+              __typename: "PullRequestReviewComment",
+              id: String(comment.id),
+              body: comment.body,
+              author: {
+                login: comment.user.login,
+              },
+              pullRequest: {
+                id: String(pull?.id),
+                number: pull?.number,
+                title: pull?.title,
+                url: pull?.html_url,
+                repository: {
+                  name: comment.repo,
+                  owner: {
+                    login: comment.owner,
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+    }
+
+    // If no comment found
+    return HttpResponse.json({
+      data: {
+        node: null,
+      },
+    });
+  }),
+
+  // GraphQL handler for fetching issue by ID
+  graphql.query("GetIssueById", ({ variables }) => {
+    const issue = db.issue.findFirst({
+      where: { id: { equals: Number(variables.id) } },
+    });
+
+    if (!issue) {
+      return HttpResponse.json({
+        data: {
+          node: null,
+        },
+      });
+    }
+
+    const comments = db.comments.findMany({
+      where: { issue_number: { equals: issue.number } },
+    });
+
+    return HttpResponse.json({
+      data: {
+        node: {
+          id: String(issue.id),
+          number: issue.number,
+          title: issue.title,
+          body: issue.body,
+          url: issue.html_url,
+          repository: {
+            name: issue.repo,
+            owner: {
+              login: issue.owner,
+            },
+          },
+          author: {
+            login: "ubiquity",
+          },
+          comments: {
+            nodes: comments.map((comment) => ({
+              id: String(comment.id),
+              body: comment.body,
+              author: {
+                login: comment.user.login,
+              },
+            })),
+          },
+        },
+      },
+    });
+  }),
+
   http.post("https://api.openai.com/v1/chat/completions", () => {
     const answer = `${JSON.stringify(["This is a mock response from OpenAI"])}`;
 

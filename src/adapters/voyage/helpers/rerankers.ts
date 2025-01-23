@@ -120,9 +120,9 @@ export class Rerankers extends SuperVoyage {
   }
 
   async reRankSimilarContent(
-    query: string,
     similarIssues: SimilarIssue[],
     similarComments: SimilarComment[],
+    query: string,
     topK: number = 5
   ): Promise<{ similarIssues: SimilarIssue[]; similarComments: SimilarComment[] }> {
     try {

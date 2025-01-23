@@ -12,6 +12,7 @@ import { CompletionsType } from "../src/adapters/openai/helpers/completions";
 import { logger } from "../src/helpers/errors";
 import { Octokit } from "@octokit/rest";
 import { createKey } from "../src/helpers/issue-fetching";
+import { SimilarComment, SimilarIssue, TreeNode } from "../src/types/github-types";
 
 const TEST_QUESTION = "what is pi?";
 const LOG_CALLER = "_Logs.<anonymous>";
@@ -19,6 +20,9 @@ const ISSUE_ID_2_CONTENT = "More context here #2";
 const ISSUE_ID_3_CONTENT = "More context here #3";
 const MOCK_ANSWER = "This is a mock answer for the chat";
 const SPEC = "This is a demo spec for a demo task just perfect for testing.";
+const BASE_LINK = "https://github.com/ubiquity/test-repo/issues/";
+const ISSUE_BODY_BASE = "Related to issue";
+const ISSUE_BODY_BASE_2 = "Just another issue";
 
 type Comment = {
   id: number;
@@ -94,6 +98,7 @@ describe("Ask plugin tests", () => {
 
   it("should construct the chat history correctly", async () => {
     const ctx = createContext(TEST_QUESTION);
+    const debugSpy = jest.spyOn(ctx.logger, "debug");
     const infoSpy = jest.spyOn(ctx.logger, "info");
     createComments([
       transformCommentTemplate(1, 1, ISSUE_ID_2_CONTENT, "ubiquity", "test-repo", true, "2"),
@@ -106,36 +111,41 @@ describe("Ask plugin tests", () => {
     await issueCommentCreatedCallback(ctx);
 
     const expectedOutput = [
-      "Formatted chat history Issue Tree Structure:",
+      "Formatted chat history: Issue Tree Structure:",
       "",
-      "Issue #1 (https://github.com/ubiquity/test-repo/issues/1)",
+      "Issue #1 (" + BASE_LINK + "1)",
       "Body:",
       `      ${SPEC}`,
       "",
       "Comments: 2",
-      `├── issuecomment-1: ubiquity: More context here #2 [#2](https://github.com/ubiquity/test-repo/issues/2)`,
-      `└── issuecomment-2: ubiquity: ${TEST_QUESTION} [#1](https://github.com/ubiquity/test-repo/issues/1)`,
+      `├── issue_comment-2: ubiquity: ${TEST_QUESTION} [#1](${BASE_LINK}1)`,
+      `├── issue_comment-1: ubiquity: ${ISSUE_ID_2_CONTENT} [#2](${BASE_LINK}2)`,
       "",
-      "      └── Issue #2 (https://github.com/ubiquity/test-repo/issues/2)",
-      "          Body:",
-      `              Related to issue #3`,
+      "Similar Issues:",
+      "- Issue #2 (" + BASE_LINK + "2) - Similarity: 50.00%",
+      `  ${ISSUE_BODY_BASE} #3`,
+      "- Issue #3 (" + BASE_LINK + "3) - Similarity: 30.00%",
+      `  ${ISSUE_BODY_BASE_2}`,
       "",
-      "          Comments: 1",
-      `          └── issuecomment-3: ubiquity: ${ISSUE_ID_3_CONTENT} [#3](https://github.com/ubiquity/test-repo/issues/3)`,
+      "└── Issue #3 (" + BASE_LINK + "3)",
+      "    Body:",
+      `        ${ISSUE_BODY_BASE_2}`,
+      "    Comments: 1",
+      `    ├── issue_comment-4: ubiquity: Just a comment [#1](${BASE_LINK}1)`,
       "",
-      "              └── Issue #3 (https://github.com/ubiquity/test-repo/issues/3)",
-      "                  Body:",
-      `                      Just another issue`,
-      "                  Comments: 1",
-      `                  └── issuecomment-4: ubiquity: Just a comment [#1](https://github.com/ubiquity/test-repo/issues/1)`,
+      "    └── Issue #2 (" + BASE_LINK + "2)",
+      "        Body:",
+      `            ${ISSUE_BODY_BASE} #3`,
+      "        Comments: 1",
+      `        ├── issue_comment-3: ubiquity: ${ISSUE_ID_3_CONTENT} [#3](${BASE_LINK}3)`,
       "",
     ].join("\n");
 
     // Find the index of the formatted chat history log
-    const chatHistoryLogIndex = infoSpy.mock.calls.findIndex((call) => (call[0] as string).startsWith("Formatted chat history"));
+    const chatHistoryLogIndex = debugSpy.mock.calls.findIndex((call) => (call[0] as string).startsWith("Formatted chat history: Issue Tree Structure:"));
 
     const normalizedExpected = normalizeString(expectedOutput);
-    const normalizedReceived = normalizeString(infoSpy.mock.calls[chatHistoryLogIndex][0] as string);
+    const normalizedReceived = normalizeString(debugSpy.mock.calls[chatHistoryLogIndex][0] as string);
     expect(normalizedReceived).toEqual(normalizedExpected);
 
     // Find the index of the answer log
@@ -173,7 +183,7 @@ function transformCommentTemplate(commentId: number, issueNumber: number, body: 
     },
     body: body,
     url: "https://api.github.com/repos/ubiquity/test-repo/issues/comments/1",
-    html_url: "https://github.com/ubiquity/test-repo/issues/1",
+    html_url: BASE_LINK + "1",
     owner: "ubiquity",
     repo: "test-repo",
     issue_number: 1,
@@ -219,8 +229,8 @@ async function setupTests() {
     ...issueTemplate,
     id: 2,
     number: 2,
-    body: "Related to issue #3",
-    html_url: "https://github.com/ubiquity/test-repo/issues/2",
+    body: `${ISSUE_BODY_BASE} #3`,
+    html_url: BASE_LINK + "2",
     url: "https://api.github.com/repos/ubiquity/test-repo/issues/2",
   });
 
@@ -228,8 +238,8 @@ async function setupTests() {
     ...issueTemplate,
     id: 3,
     number: 3,
-    body: "Just another issue",
-    html_url: "https://github.com/ubiquity/test-repo/issues/3",
+    body: ISSUE_BODY_BASE_2,
+    html_url: BASE_LINK + "3",
     url: "https://api.github.com/repos/ubiquity/test-repo/issues/3",
   });
 }
@@ -293,7 +303,7 @@ function createContext(body = TEST_QUESTION) {
             return [
               {
                 issue_id: "2",
-                issue_plaintext: "Related to issue #3",
+                issue_plaintext: `${ISSUE_BODY_BASE} #3`,
                 similarity: 0.5,
               },
               {
@@ -388,6 +398,15 @@ function createContext(body = TEST_QUESTION) {
           reRankResults: async (similarText: string[]) => {
             return similarText;
           },
+          reRankSimilarContent: async (similarIssues: SimilarIssue[], similarComments: SimilarComment[]) => {
+            return {
+              similarIssues,
+              similarComments,
+            };
+          },
+          reRankTreeNodes: async (rootNode: TreeNode) => {
+            return rootNode;
+          },
         },
       },
       openai: {
@@ -408,6 +427,9 @@ function createContext(body = TEST_QUESTION) {
                 total: 1150,
               },
             };
+          },
+          getPromptTokens: async (query: string): Promise<number> => {
+            return query ? query.length : 100;
           },
           findTokenLength: async () => {
             return 1000;

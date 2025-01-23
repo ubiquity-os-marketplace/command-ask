@@ -387,7 +387,7 @@ async function processNodeContent(
     ] as const) {
       if (!items?.length) continue;
 
-      const typeHeader = `${childPrefix}${type}:`;
+      const typeHeader = `${childPrefix}${type}`;
       if (!updateTokenCount(typeHeader, testTokenLimits)) break;
       output.push(typeHeader);
 

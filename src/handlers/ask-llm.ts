@@ -46,7 +46,7 @@ export async function askQuestion(context: Context, question: string): Promise<C
     logger.debug(`Fetched similar issues: ${JSON.stringify(similarIssues)}`);
 
     // Rerank similar content
-    const { similarIssues: rerankedIssues, similarComments: rerankedComments } = await reranker.reRankSimilarContent(question, similarIssues, similarComments);
+    const { similarIssues: rerankedIssues, similarComments: rerankedComments } = await reranker.reRankSimilarContent(similarIssues, similarComments, question);
 
     // Calculate token usage from reranked content
     const similarText = [
