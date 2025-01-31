@@ -17,3 +17,4 @@ script.ts
 .wrangler
 test-dashboard.md
 eval-results.md
+service-account.json
