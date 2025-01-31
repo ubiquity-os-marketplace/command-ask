@@ -56,15 +56,10 @@ const getContentFromSpreadsheet = async (documentId: string) => {
     }
     const sheetNames = spreadsheetInfo.data.sheets.map((sheet) => sheet.properties?.title).filter((el) => !!el);
 
-    console.log(`Spreadsheet Title: ${spreadsheetInfo.data.properties?.title}`);
-    console.log(`Sheets Found: ${sheetNames.join(", ")}`);
-
-    const text = [] as string[];
+    let text = "";
 
     // Fetch data from each sheet
     for (const sheetName of sheetNames) {
-      console.log(`\nFetching data from sheet: ${sheetName}`);
-
       const result = await sheets.spreadsheets.values.get({
         spreadsheetId: documentId,
         range: `${sheetName}`,
@@ -76,12 +71,12 @@ const getContentFromSpreadsheet = async (documentId: string) => {
         continue;
       }
 
-      console.log(rows.flat().reduce((v1, v2) => (v1 += String(v2) + "\n")));
-
-      // text += rows.flat().reduce((v1, v2) => v1 += String(v2) + "\n");
+      text += String(rows.map((row) => String(row.flat()) + "\n"));
     }
-
-    return text;
+    return {
+      title: spreadsheetInfo.data.properties?.title,
+      data: text,
+    };
   } catch (error) {
     console.error(error);
   }
@@ -110,7 +105,10 @@ const getContentFromDocs = async (documentId: string) => {
       }
     });
 
-    return text;
+    return {
+      title: doc.title,
+      data: text,
+    };
   } catch (error) {
     console.error(error);
   }
@@ -121,38 +119,33 @@ const getContentFromSlides = async (documentId: string) => {
 
   const slides = google.slides({ version: "v1", auth });
 
-  try {
-    const res = await slides.presentations.get({ presentationId: documentId });
-    const presentation = res.data;
+  const res = await slides.presentations.get({ presentationId: documentId });
+  const presentation = res.data;
 
-    console.log(`Title: ${presentation.title}`);
-
-    if (!presentation.slides) {
-      console.log("Nothign to fetch");
-      return;
-    }
-
-    let textContent = "";
-
-    presentation.slides.forEach((slide, index) => {
-      console.log(`Slide ${index + 1}:`);
-      if (!slide.pageElements) return;
-      slide.pageElements.forEach((element) => {
-        if (element.shape && element.shape.text && element.shape.text.textElements) {
-          element.shape.text.textElements.forEach((textElement) => {
-            if (textElement.textRun && textElement.textRun.content) {
-              textContent += textElement.textRun.content;
-            }
-          });
-        }
-      });
-    });
-
-    console.log("\nExtracted Text:\n", textContent);
-    return textContent;
-  } catch (error) {
-    console.error(error);
+  if (!presentation.slides) {
+    console.log("Nothign to fetch");
+    return;
   }
+
+  let text = "";
+
+  presentation.slides.forEach((slide) => {
+    if (!slide.pageElements) return;
+    slide.pageElements.forEach((element) => {
+      if (element.shape && element.shape.text && element.shape.text.textElements) {
+        element.shape.text.textElements.forEach((textElement) => {
+          if (textElement.textRun && textElement.textRun.content) {
+            text += textElement.textRun.content;
+          }
+        });
+      }
+    });
+  });
+
+  return {
+    title: presentation.title,
+    data: text,
+  };
 };
 
 export const getContentFromUrl = async (url: string) => {
