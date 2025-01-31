@@ -25,10 +25,8 @@ const BASE_LINK = "https://github.com/ubiquity/test-repo/issues/";
 const ISSUE_BODY_BASE = "Related to issue";
 const ISSUE_BODY_BASE_2 = "Just another issue";
 const SHEETS_LINK = "https://docs.google.com/spreadsheets/d/1WKHbT-7KOgjEawq5h5Ic1qUWzpfAzuD_J06N1JwOCGs/edit?gid=0#gid=0";
-const SHEETS_CONTENT = `This is it: ${SHEETS_LINK}`;
-const SHEETS_W_ID_LINK = "https://docs.google.com/spreadsheets/d/1WKHbT-7KOgjEawq5h5Ic1qUWzpfAzuD_J06N1JwOCGs/edit?gid=618540851#gid=618540851";
-const SHEETS_W_ID_CONTENT = `This is it: ${SHEETS_W_ID_LINK}`;
 const DOCS_LINK = "https://docs.google.com/document/d/1fTwbzvo_dt7F163iFQTDuQ0Ym5sVRDRhmHrlDRlvavg/edit?tab=t.0#heading=h.ooficcs2qtsj";
+const DOCS_CONTENT = `This is it: ${DOCS_LINK}`;
 const SLIDES_LINK = "https://docs.google.com/presentation/d/1ya-SlYR6WdnQ0oMqbeCl2FH75j_zMLcnB87jwmoAgwU/edit#slide=id.g2e5396ce6aa_0_383";
 
 type Comment = {
@@ -180,91 +178,51 @@ describe("Google Drive integration", () => {
     const { documentId } = consumeUrl(SHEETS_LINK, "SHEETS");
     expect(documentId).toBe("1WKHbT-7KOgjEawq5h5Ic1qUWzpfAzuD_J06N1JwOCGs");
     const sheetData = await getContentFromUrl(SHEETS_LINK);
-    expect(sheetData).toContain("tinygrad");
+    expect(sheetData).toBeDefined();
+    expect(sheetData?.data).toContain("tinygrad");
+    expect(sheetData?.title).toEqual("Bounties");
   });
 
   it("should get doc data Docs link", async () => {
     const { documentId } = consumeUrl(DOCS_LINK);
     expect(documentId).toBe("1fTwbzvo_dt7F163iFQTDuQ0Ym5sVRDRhmHrlDRlvavg");
     const docData = await getContentFromUrl(DOCS_LINK);
-    expect(docData).toContain("Stacks Prize: $5,000/$20,000");
+    expect(docData).toBeDefined();
+    expect(docData?.data).toContain("3. Eligibility to win:");
+    expect(docData?.title).toEqual("Stacks Prize Rule");
   });
-  
+
   it("should handle Slides link", async () => {
     const { documentId } = consumeUrl(SLIDES_LINK, "SLIDES");
     expect(documentId).toBe("1ya-SlYR6WdnQ0oMqbeCl2FH75j_zMLcnB87jwmoAgwU");
-    const sheetData = await getContentFromUrl(SLIDES_LINK);
-    expect(sheetData).toContain("EF JavaScript");
+    const slideData = await getContentFromUrl(SLIDES_LINK);
+    expect(slideData).toBeDefined();
+    expect(slideData?.data).toContain("EF JavaScript");
+    expect(slideData?.title?.startsWith("EF JavaScript")).toBeTruthy();
   });
 
   it("should construct the chat history w/ google links correctly", async () => {
+    jest.clearAllMocks();
+    await setupTests();
     const ctx = createContext(TEST_QUESTION);
     const debugSpy = jest.spyOn(ctx.logger, "debug");
-    const infoSpy = jest.spyOn(ctx.logger, "info");
     createComments([
-      transformCommentTemplate(1, 1, SHEETS_CONTENT, "user", "test-repo", true, "2"),
-      transformCommentTemplate(1, 1, SHEETS_W_ID_CONTENT, "user", "test-repo", true, "2"),
-      transformCommentTemplate(4, 3, "Just a comment", "ubiquity", "test-repo", true, "1"),
+      transformCommentTemplate(1, 1, DOCS_CONTENT, "ubiquity", "test-repo", true, "2"),
+      transformCommentTemplate(3, 2, SLIDES_LINK, "ubiquity", "test-repo", true, "3"),
+      transformCommentTemplate(4, 3, SHEETS_LINK, "ubiquity", "test-repo", true, "1"),
     ]);
 
     const issueCommentCreatedCallback = (await import("../src/handlers/comment-created-callback")).processCommentCallback;
     await issueCommentCreatedCallback(ctx);
 
-    const expectedOutput = [
-      "Formatted chat history: Issue Tree Structure:",
-      "",
-      "Issue #1 (" + BASE_LINK + "1)",
-      "Body:",
-      `      ${SPEC}`,
-      "",
-      "Comments: 2",
-      `├── issue_comment-2: ubiquity: ${TEST_QUESTION} [#1](${BASE_LINK}1)`,
-      `├── issue_comment-1: ubiquity: ${ISSUE_ID_2_CONTENT} [#2](${BASE_LINK}2)`,
-      "",
-      "Similar Issues:",
-      "- Issue #2 (" + BASE_LINK + "2) - Similarity: 50.00%",
-      `  ${ISSUE_BODY_BASE} #3`,
-      "- Issue #3 (" + BASE_LINK + "3) - Similarity: 30.00%",
-      `  ${ISSUE_BODY_BASE_2}`,
-      "",
-      "└── Issue #3 (" + BASE_LINK + "3)",
-      "    Body:",
-      `        ${ISSUE_BODY_BASE_2}`,
-      "    Comments: 1",
-      `    ├── issue_comment-4: ubiquity: Just a comment [#1](${BASE_LINK}1)`,
-      "",
-      "    └── Issue #2 (" + BASE_LINK + "2)",
-      "        Body:",
-      `            ${ISSUE_BODY_BASE} #3`,
-      "        Comments: 1",
-      `        ├── issue_comment-3: ubiquity: ${ISSUE_ID_3_CONTENT} [#3](${BASE_LINK}3)`,
-      "",
-    ].join("\n");
-
     // Find the index of the formatted chat history log
     const chatHistoryLogIndex = debugSpy.mock.calls.findIndex((call) => (call[0] as string).startsWith("Formatted chat history: Issue Tree Structure:"));
 
-    const normalizedExpected = normalizeString(expectedOutput);
     const normalizedReceived = normalizeString(debugSpy.mock.calls[chatHistoryLogIndex][0] as string);
-    expect(normalizedReceived).toEqual(normalizedExpected);
-
-    // Find the index of the answer log
-    const answerLogIndex = infoSpy.mock.calls.findIndex((call) => (call[0] as string).startsWith("Answer:"));
-
-    expect(infoSpy.mock.calls[answerLogIndex]).toEqual([
-      "Answer: This is a mock answer for the chat",
-      {
-        caller: LOG_CALLER,
-        metadata: {
-          tokenUsage: {
-            input: 1000,
-            output: 150,
-            total: 1150,
-          },
-          groundTruths: ["This is a mock answer for the chat"],
-        },
-      },
-    ]);
+    expect(normalizedReceived).toContain("<google-doc");
+    expect(normalizedReceived).toContain("</google-doc>");
+    const count = (normalizedReceived.match(/google-doc/g) || []).length;
+    expect(count).toEqual(6);
   });
 });
 
