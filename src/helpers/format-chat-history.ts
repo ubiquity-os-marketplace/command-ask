@@ -6,6 +6,7 @@ import { logger } from "./errors";
 import { TreeNode } from "../types/github-types";
 import { updateTokenCount, createDefaultTokenLimits } from "./token-utils";
 import { SimilarIssue, SimilarComment } from "../types/github-types";
+import { getContentFromUrl } from "./google";
 
 const SIMILAR_ISSUE_IDENTIFIER = "Similar Issues:";
 const SIMILAR_COMMENT_IDENTIFIER = "Similar Comments:";
@@ -123,6 +124,7 @@ async function buildTree(
   const processedNodes = new Map<string, TreeNode>();
   // Extract issue/PR number based on payload type
   let issueNumber;
+  console.log(context.payload);
   if ("issue" in context.payload) {
     issueNumber = context.payload.issue.number;
   } else if ("pull_request" in context.payload) {
@@ -375,6 +377,28 @@ async function processNodeContent(
           ];
 
           tryAddContent(codeLines, testTokenLimits);
+        }
+
+        const regex = /https:\/\/docs\.google\.com\/(spreadsheets|document|presentation)\/d\/[a-zA-Z0-9_-]+/g;
+
+        const matches = comment.body.match(regex);
+        const hasGoogleLink = !!matches?.length;
+
+        // Pull google content
+        if (hasGoogleLink) {
+          await Promise.all(
+            matches.map(async (match) => {
+              const resp = await getContentFromUrl(match);
+              if (resp) {
+                const contentXml = `
+                  <google-doc href="${matches[0]}" title="${resp.title}">
+                  ${resp.data}
+                  </google-doc> 
+                `;
+                tryAddContent(contentXml.split("\n"), testTokenLimits);
+              }
+            })
+          );
         }
       }
       output.push("");
