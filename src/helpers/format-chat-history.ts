@@ -124,7 +124,6 @@ async function buildTree(
   const processedNodes = new Map<string, TreeNode>();
   // Extract issue/PR number based on payload type
   let issueNumber;
-  console.log(context.payload);
   if ("issue" in context.payload) {
     issueNumber = context.payload.issue.number;
   } else if ("pull_request" in context.payload) {
