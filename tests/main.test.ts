@@ -73,7 +73,7 @@ afterAll(() => server.close());
 
 // TESTS
 
-describe.skip("Ask plugin tests", () => {
+describe("Ask plugin tests", () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     await setupTests();
