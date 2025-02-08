@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.2.0](https://github.com/ubiquity-os-marketplace/command-ask/compare/v1.1.0...v1.2.0) (2025-02-06)
+
+
+### Features
+
+* add similar issues and comments to common struct ([5446b4b](https://github.com/ubiquity-os-marketplace/command-ask/commit/5446b4b0206c09b9cf35c8833ef0c95c135ad631))
+* add similar issues and comments to common struct ([b6f9736](https://github.com/ubiquity-os-marketplace/command-ask/commit/b6f9736a6d32a369595411bc459961879d82fcaa))
+
+
+### Bug Fixes
+
+* a start message saying the bot is "thinking" is displayed ([187ef58](https://github.com/ubiquity-os-marketplace/command-ask/commit/187ef583281b01cb850734985c8330591ef683db))
+* allow . in the owner/reponame ([9607f47](https://github.com/ubiquity-os-marketplace/command-ask/commit/9607f4779e24ad8e9db4980743aa3fec4fb3c233))
+* context is empty add logger ([6b2085f](https://github.com/ubiquity-os-marketplace/command-ask/commit/6b2085fc50f5f8800a57e7f65bcdf51b308bbdb4))
+* context is empty add logger ([225ea4b](https://github.com/ubiquity-os-marketplace/command-ask/commit/225ea4b4e3c6a679958a2a2c2ca6b3bb2b87f786))
+* depth &gt; 15 retrival works ([0caaabd](https://github.com/ubiquity-os-marketplace/command-ask/commit/0caaabd0486648fdf204542a473ea393c99edbae))
+* formatting ([e4e374c](https://github.com/ubiquity-os-marketplace/command-ask/commit/e4e374cf2a82019f63855da9e3feaf23454ff867))
+* knip, logger and formatting ([a687136](https://github.com/ubiquity-os-marketplace/command-ask/commit/a6871364dab80e2f199d93b95f32df1903ce10ba))
+* manifest.json and format-chat-history to prev version ([13d6b93](https://github.com/ubiquity-os-marketplace/command-ask/commit/13d6b93c18338b083fcf1ac6bad8f91d329a454e))
+* prrc response ([22e3915](https://github.com/ubiquity-os-marketplace/command-ask/commit/22e3915d1f16d58cdffcbad09e4dbdb20904c357))
+* pull request comment fetching ([6c750d1](https://github.com/ubiquity-os-marketplace/command-ask/commit/6c750d1f65ea46b23a52638711d6c85c4ac68791))
+* pull request review comments support added ([58bd81a](https://github.com/ubiquity-os-marketplace/command-ask/commit/58bd81a08d2c4e067a482d8780bbab7ef748b8ef))
+* pull request review comments support added ([6ef6f91](https://github.com/ubiquity-os-marketplace/command-ask/commit/6ef6f9122e546a0da480960278ec10c66070aee7))
+* remove unused types and fix param errors ([4ba71ec](https://github.com/ubiquity-os-marketplace/command-ask/commit/4ba71ece2819b2abb48de99880095b8eeebc023a))
+* skip plugin exec if question is missing ([a78d922](https://github.com/ubiquity-os-marketplace/command-ask/commit/a78d9224efd7165001325e14a024b88a7b59eef3))
+* test ([84b2559](https://github.com/ubiquity-os-marketplace/command-ask/commit/84b2559157a98617c232b3844b645e347ed418b9))
+* test ([df9b1ec](https://github.com/ubiquity-os-marketplace/command-ask/commit/df9b1ec317b1eeb113987ce5cc2409b650aab29d))
+* test ([957b4fd](https://github.com/ubiquity-os-marketplace/command-ask/commit/957b4fd00fa61bda9fde50ea46b5ed4e560f8d73))
+* tests ([5c55f9b](https://github.com/ubiquity-os-marketplace/command-ask/commit/5c55f9b43231e0c7321ae61fe8c07cbc61fadc72))
+* the SDK is now used to post comments to the issue ([8f1e7ac](https://github.com/ubiquity-os-marketplace/command-ask/commit/8f1e7ac698d4c46d74ed69ed93066746ab26653a))
+* token counting and reranker ([4fc3c30](https://github.com/ubiquity-os-marketplace/command-ask/commit/4fc3c303c8bb859fd616795bb4c94d9b57786070))
+* token counting issue ([8411227](https://github.com/ubiquity-os-marketplace/command-ask/commit/84112274fb9463b22ec38732aa4eddd388d37e04))
+* token limit, should be fetched from the maxCompletionToken Function ([e2e601e](https://github.com/ubiquity-os-marketplace/command-ask/commit/e2e601e1bc03c75bb5814314dc3691b8f849cb5d))
+
 ## [1.1.0](https://github.com/ubiquity-os-marketplace/command-ask/compare/v1.0.0...v1.1.0) (2025-01-11)
 
 ### Features
