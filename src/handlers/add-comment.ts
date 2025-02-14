@@ -40,7 +40,6 @@ export async function addCommentToIssue(context: Context, message: string, optio
           await context.octokit.rest.pulls.updateReviewComment({
             owner,
             repo,
-            pull_number: pullNumber,
             body: message,
             comment_id: addCommentToIssue.lastCommentId,
           });

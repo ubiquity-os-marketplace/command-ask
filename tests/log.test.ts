@@ -31,6 +31,11 @@ describe("Log post message test", () => {
     } as never;
 
     await processCommentCallback(context);
-    expect(addCommentToIssue).toHaveBeenCalledWith(expect.anything(), "UbiquityOS is thinking...");
+    expect(addCommentToIssue).toHaveBeenCalledWith(
+      expect.anything(),
+      `> [!TIP]
+> UbiquityOS is thinking...`,
+      undefined
+    );
   });
 });
