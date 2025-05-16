@@ -24,7 +24,7 @@ export const pluginSettingsSchema = T.Object(
     maxRetryAttempts: T.Number({ default: 5, description: "The number of times to retry AI prompts" }),
     similarityThreshold: T.Number({ default: 0.9, description: "When fetching embeddings context, the similarity threshold to use (1- similarityThreshold)" }),
     maxDepth: T.Optional(T.Number({ default: 3, description: "The max depth of referenced github issues to traverse for context" })), // max depth of the chat history to be fetched
-    processDriveLinks: T.Boolean({ default: true, description: "Whether to process Google Drive links" }),
+    processDocumentLinks: T.Boolean({ default: true, description: "Whether to process document links" }),
   },
   { default: {} }
 );
