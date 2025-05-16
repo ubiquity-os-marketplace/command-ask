@@ -6,7 +6,7 @@ import { DocumentFile } from "../types/google";
 import { fetchRepoDependencies, fetchRepoLanguageStats } from "./ground-truths/chat-bot";
 import { findGroundTruths } from "./ground-truths/find-ground-truths";
 
-export async function askQuestion(context: Context, question: string, driveContents?: DocumentFile[]): Promise<CompletionsType> {
+export async function askQuestion(context: Context, question: string, documents?: DocumentFile[]): Promise<CompletionsType> {
   if (!question) {
     throw context.logger.error("No question provided");
   }
@@ -77,7 +77,7 @@ export async function askQuestion(context: Context, question: string, driveConte
 
   // Get formatted chat history with remaining tokens and reranked content
   // Pass drive contents along with other parameters to build chat history
-  const formattedChat = await formatChatHistory(context, maxDepth, rerankedIssues, rerankedComments, availableTokens, driveContents);
+  const formattedChat = await formatChatHistory(context, maxDepth, rerankedIssues, rerankedComments, availableTokens, documents);
   context.logger.debug("Formatted chat history: " + formattedChat.join("\n"));
 
   // Create completion with all components

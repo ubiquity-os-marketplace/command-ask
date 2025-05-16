@@ -1,12 +1,12 @@
-import { Context } from "./types";
-import { createAdapters } from "./adapters";
 import { createClient } from "@supabase/supabase-js";
-import { VoyageAIClient } from "voyageai";
-import OpenAI from "openai";
-import { callCallbacks } from "./helpers/callback-proxy";
-import { processCommentCallback } from "./handlers/comment-created-callback";
 import { GoogleAuth } from "google-auth-library";
 import { google } from "googleapis";
+import OpenAI from "openai";
+import { VoyageAIClient } from "voyageai";
+import { createAdapters } from "./adapters";
+import { processCommentCallback } from "./handlers/comment-created-callback";
+import { callCallbacks } from "./helpers/callback-proxy";
+import { Context } from "./types";
 
 export async function plugin(context: Context) {
   const { env, config } = context;
@@ -19,7 +19,7 @@ export async function plugin(context: Context) {
     ...(config.openAiBaseUrl && { baseURL: config.openAiBaseUrl }),
   };
   const openaiClient = new OpenAI(openAiObject);
-  if (config.processDriveLinks) {
+  if (config.processDocumentLinks) {
     const credentials = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_KEY);
 
     if (!credentials || typeof credentials !== "object" || !credentials.client_email || !credentials.private_key) {

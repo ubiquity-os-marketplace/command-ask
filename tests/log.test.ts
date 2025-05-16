@@ -12,7 +12,7 @@ describe("Log post message test", () => {
     }));
     const { processCommentCallback } = await import("../src/handlers/comment-created-callback");
     const context = createContext("hello");
-    context.config.processDriveLinks = false;
+    context.config.processDocumentLinks = false;
     await processCommentCallback(context);
     expect(context.commentHandler.postComment).toHaveBeenNthCalledWith(
       1,
