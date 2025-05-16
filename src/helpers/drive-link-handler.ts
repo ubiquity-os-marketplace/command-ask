@@ -15,13 +15,18 @@ interface DriveLink {
   requiresPermission: boolean;
 }
 
-export async function extractAttachments(context: Context, content: string) {
+export async function extractAttachments(context: Context, question: string) {
   const driveUrlPattern = /\[([^\]]+)\]\((https:\/\/github\.com\/user-attachments\/files\/[^\s)]+)\)/g;
-  const matches = [...content.matchAll(driveUrlPattern)];
+  const matches = [...question.matchAll(driveUrlPattern)];
   const attachments = matches.map((match) => ({
     name: match[1],
     url: match[2],
   }));
+
+  if (attachments.length === 0) {
+    context.logger.info("No attachments found in the question");
+    return [];
+  }
 
   const documents: DocumentFile[] = [];
   for (const attachment of attachments) {
