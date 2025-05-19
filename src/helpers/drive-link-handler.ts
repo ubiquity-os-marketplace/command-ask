@@ -43,25 +43,21 @@ export async function extractAttachments(context: Context, question: string) {
 
       const type = await fileTypeFromBuffer(buffer); // binary types
       const mimeByExt = mimeLookup(attachment.originalFileName ?? ""); // other types
+      let content: string;
       if (type && ["docx", "pptx", "xlsx", "odt", "odp", "ods", "pdf"].includes(type.ext)) {
-        const parsedContent = await parseOfficeAsync(buffer);
-        documents.push({
-          name: attachment.originalFileName || attachment.name,
-          author: "",
-          content: parsedContent,
-          url: attachment.url,
-        });
+        content = await parseOfficeAsync(buffer);
       } else if (mimeByExt && (mimeByExt.startsWith("text/") || ["application/json", "application/xml", "application/csv"].includes(mimeByExt))) {
-        const textContent = buffer.toString("utf-8");
-        documents.push({
-          name: attachment.originalFileName || attachment.name,
-          author: "",
-          content: textContent,
-          url: attachment.url,
-        });
+        content = buffer.toString("utf-8");
       } else {
         context.logger.info(`Unsupported file type for attachment [${attachment.url}]: ${type?.ext || mimeByExt}`);
+        content = "[Unsupported file type]";
       }
+      documents.push({
+        name: attachment.originalFileName || attachment.name,
+        author: "",
+        content: content,
+        url: attachment.url,
+      });
     } catch (err) {
       context.logger.warn(`Error processing attachment [${attachment.url}]`, { err });
     }
