@@ -21,6 +21,7 @@ export async function extractAttachments(context: Context, question: string) {
   const attachments = matches.map((match) => ({
     name: match[1],
     url: match[2],
+    originalFileName: match[2].split("/").pop(),
   }));
 
   if (attachments.length === 0) {
@@ -33,7 +34,7 @@ export async function extractAttachments(context: Context, question: string) {
     try {
       const response = await fetch(attachment.url);
       if (!response.ok) {
-        context.logger.warn(`Failed to fetch attachment ${attachment.name}: ${response.statusText}`);
+        context.logger.warn(`Failed to fetch attachment [${attachment.url}]: ${response.statusText}`);
         continue;
       }
       const buffer = Buffer.from(await response.arrayBuffer());
@@ -43,25 +44,26 @@ export async function extractAttachments(context: Context, question: string) {
       if (type && ["docx", "pptx", "xlsx", "odt", "odp", "ods", "pdf"].includes(type.ext)) {
         const parsedContent = await parseOfficeAsync(buffer);
         documents.push({
-          name: attachment.name,
+          name: attachment.originalFileName || attachment.name,
           author: "",
           content: parsedContent,
+          url: attachment.url,
         });
       } else {
         // Fallback: use extension
-        const ext = attachment.url.split(".").pop()?.toLowerCase();
-        const mimeByExt = ext ? mimeLookup(ext) : null;
+        const mimeByExt = mimeLookup(attachment.originalFileName ?? "");
         if (mimeByExt && (mimeByExt.startsWith("text/") || ["application/json", "application/xml", "application/csv"].includes(mimeByExt))) {
           const textContent = buffer.toString("utf-8");
           documents.push({
-            name: attachment.name,
+            name: attachment.originalFileName || attachment.name,
             author: "",
             content: textContent,
+            url: attachment.url,
           });
         }
       }
     } catch (err) {
-      context.logger.warn(`Error processing attachment ${attachment.url}`, { err });
+      context.logger.warn(`Error processing attachment [${attachment.url}]`, { err });
     }
   }
 
@@ -217,6 +219,7 @@ export async function getDriveContents(context: Context, links: DriveLink[]): Pr
         name: match ? `document-${match[1]}` : link.url,
         content: `Content of "${driveContent.metadata.name}":\n${content}`,
         author: driveContent.metadata.owners?.[0]?.displayName || "Unknown",
+        url: link.url,
       });
     } catch (error) {
       context.logger.error(`Failed to fetch content for ${link.url}: ${error}`);

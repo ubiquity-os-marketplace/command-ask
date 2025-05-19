@@ -382,13 +382,14 @@ async function processNodeContent(
 
   // Process drive contents for root node if available
   if (!node.parent && node.documents?.length) {
-    const driveHeader = `${childPrefix}Google Drive Contents:`;
+    const driveHeader = `${childPrefix}Document Contents:`;
     if (updateTokenCount(driveHeader, testTokenLimits)) {
       output.push(driveHeader);
 
       for (const doc of node.documents) {
         const authorText = doc.author ? " (by " + doc.author + ")" : "";
-        const docHeader = `${childPrefix}├── ${doc.name}${authorText}:`;
+        const urlText = doc.url ? " (" + doc.url + ")" : "";
+        const docHeader = `${childPrefix}├── ${doc.name}${authorText}${urlText}:`;
         if (!updateTokenCount(docHeader, testTokenLimits)) break;
         output.push(docHeader);
 
