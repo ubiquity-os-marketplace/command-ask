@@ -1,10 +1,10 @@
-import { db } from "./__mocks__/db";
-import { Context, SupportedEvents } from "../src/types";
-import { CompletionsType } from "../src/adapters/openai/helpers/completions";
-import { Octokit } from "@octokit/rest";
-import { SimilarComment, SimilarIssue, TreeNode } from "../src/types/github-types";
-import { LogReturn, Logs } from "@ubiquity-os/ubiquity-os-logger";
 import { jest } from "@jest/globals";
+import { Octokit } from "@octokit/rest";
+import { LogReturn, Logs } from "@ubiquity-os/ubiquity-os-logger";
+import { CompletionsType } from "../src/adapters/openai/helpers/completions";
+import { Context, SupportedEvents } from "../src/types";
+import { SimilarComment, SimilarIssue, TreeNode } from "../src/types/github-types";
+import { db } from "./__mocks__/db";
 
 const TEST_QUESTION = "what is pi?";
 const ISSUE_ID_2_CONTENT = "More context here #2";
@@ -51,6 +51,7 @@ export function createContext(body = TEST_QUESTION) {
     logger: new Logs("debug"),
     config: {
       maxDepth: 5,
+      processDocumentLinks: true,
     },
     env: {
       UBIQUITY_OS_APP_NAME: "UbiquityOS",

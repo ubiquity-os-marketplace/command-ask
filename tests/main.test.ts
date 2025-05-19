@@ -1,16 +1,17 @@
-import { db } from "./__mocks__/db";
-import { server } from "./__mocks__/node";
-import usersGet from "./__mocks__/users-get.json";
-import { expect, describe, beforeAll, beforeEach, afterAll, afterEach, it, jest } from "@jest/globals";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { drop } from "@mswjs/data";
 import { TransformDecodeCheckError, Value } from "@sinclair/typebox/value";
-import { envSchema } from "../src/types/env";
-import { createContext } from "./utils";
-import issueTemplate from "./__mocks__/issue-template";
-import repoTemplate from "./__mocks__/repo-template";
 import { LogReturn } from "@ubiquity-os/ubiquity-os-logger";
+import { http, HttpResponse } from "msw";
+import { envSchema } from "../src/types/env";
+import { db } from "./__mocks__/db";
+import issueTemplate from "./__mocks__/issue-template";
+import { server } from "./__mocks__/node";
+import repoTemplate from "./__mocks__/repo-template";
+import usersGet from "./__mocks__/users-get.json";
+import { createContext } from "./utils";
 
-const TEST_QUESTION = "what is pi?";
+const TEST_QUESTION = "can you check [costs](https://github.com/user-attachments/files/20233948/costs.csv) and tell me the summary?";
 const ISSUE_ID_2_CONTENT = "More context here #2";
 const ISSUE_ID_3_CONTENT = "More context here #3";
 const MOCK_ANSWER = "This is a mock answer for the chat";
@@ -95,6 +96,12 @@ describe("Ask plugin tests", () => {
       transformCommentTemplate(4, 3, "Just a comment", "ubiquity", "test-repo", true, "1"),
     ]);
 
+    server.use(
+      http.get("https://github.com/user-attachments/files/20233948/costs.csv", () => {
+        return HttpResponse.text("5,4,3,2,1\n1,2,3,4,5\n");
+      })
+    );
+
     const issueCommentCreatedCallback = (await import("../src/handlers/comment-created-callback")).processCommentCallback;
     await issueCommentCreatedCallback(ctx);
 
@@ -108,6 +115,11 @@ describe("Ask plugin tests", () => {
       "Comments: 2",
       `├── issue_comment-2: ubiquity: ${TEST_QUESTION} [#1](${BASE_LINK}1)`,
       `├── issue_comment-1: ubiquity: ${ISSUE_ID_2_CONTENT} [#2](${BASE_LINK}2)`,
+      "",
+      "Document Contents:",
+      "├── costs.csv (https://github.com/user-attachments/files/20233948/costs.csv):",
+      "    5,4,3,2,1",
+      "    1,2,3,4,5",
       "",
       "Similar Issues:",
       "- Issue #2 (" + BASE_LINK + "2) - Similarity: 50.00%",
