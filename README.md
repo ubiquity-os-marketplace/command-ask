@@ -72,7 +72,7 @@ Command Ask is built as a Cloudflare Worker that integrates with GitHub's webhoo
 - **Issue/PR Fetching**: Recursively retrieves related GitHub conversations
 - **Chat History Formatting**: Structures conversation history for LLM context
 - **Callback Proxy**: Manages asynchronous webhook callbacks
-- **Drive Link Handler**: Processes Google Drive links and extracts content
+- **Document Handler**: Processes document links and extracts content
 
 ### External Service Integration
 
@@ -173,7 +173,7 @@ plugins:
         with:
           model: "anthropic/claude-3.7-sonnet"
           openAiBaseUrl: "https://openrouter.ai/api/v1" # OpenRouter API URL
-          parseDriveLinks: true # Enable Google Drive integration
+          processDocumentLinks: true # Enable document parsing
 ```
 
 `.dev.vars` (for local testing):

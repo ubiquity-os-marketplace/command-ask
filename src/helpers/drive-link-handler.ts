@@ -17,8 +17,8 @@ interface DriveLink {
 
 export async function extractAttachments(context: Context, question: string) {
   context.logger.info("Checking for uploaded attachments in the question");
-  const driveUrlPattern = /\[([^\]]+)\]\((https:\/\/github\.com\/user-attachments\/files\/[^\s)]+)\)/g;
-  const matches = [...question.matchAll(driveUrlPattern)];
+  const attachmentUrlPattern = /\[([^\]]+)\]\((https:\/\/github\.com\/user-attachments\/files\/[^\s)]+)\)/g;
+  const matches = [...question.matchAll(attachmentUrlPattern)];
   const attachments = matches.map((match) => ({
     name: match[1],
     url: match[2],

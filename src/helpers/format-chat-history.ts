@@ -380,7 +380,7 @@ async function processNodeContent(
     }
   }
 
-  // Process drive contents for root node if available
+  // Process document contents for root node if available
   if (!node.parent && node.documents?.length) {
     const driveHeader = `${childPrefix}Document Contents:`;
     if (updateTokenCount(driveHeader, testTokenLimits)) {
