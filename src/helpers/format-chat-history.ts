@@ -380,15 +380,16 @@ async function processNodeContent(
     }
   }
 
-  // Process drive contents for root node if available
-  if (!node.parent && node.driveContents?.length) {
-    const driveHeader = `${childPrefix}Google Drive Contents:`;
+  // Process document contents for root node if available
+  if (!node.parent && node.documents?.length) {
+    const driveHeader = `${childPrefix}Document Contents:`;
     if (updateTokenCount(driveHeader, testTokenLimits)) {
       output.push(driveHeader);
 
-      for (const doc of node.driveContents) {
+      for (const doc of node.documents) {
         const authorText = doc.author ? " (by " + doc.author + ")" : "";
-        const docHeader = `${childPrefix}├── ${doc.name}${authorText}:`;
+        const urlText = doc.url ? " (" + doc.url + ")" : "";
+        const docHeader = `${childPrefix}├── ${doc.name}${authorText}${urlText}:`;
         if (!updateTokenCount(docHeader, testTokenLimits)) break;
         output.push(docHeader);
 
@@ -526,16 +527,16 @@ export async function buildChatHistoryTree(
   maxDepth: number = 2,
   similarComments: SimilarComment[],
   similarIssues: SimilarIssue[],
-  driveContents?: DocumentFile[]
+  documents?: DocumentFile[]
 ): Promise<{ tree: TreeNode | null; tokenLimits: TokenLimits }> {
   const specAndBodies: Record<string, string> = {};
   const tokenLimits = createDefaultTokenLimits(context);
   const { tree } = await buildTree(context, specAndBodies, maxDepth, tokenLimits, similarIssues, similarComments);
 
   if (tree) {
-    // Add drive contents to the root node if available
-    if (driveContents && driveContents?.length) {
-      tree.driveContents = driveContents;
+    // Add documents to the root node if available
+    if (documents && documents?.length) {
+      tree.documents = documents;
     }
 
     // Add pull request specific content
@@ -557,10 +558,10 @@ export async function formatChatHistory(
   similarIssues: SimilarIssue[],
   similarComments: SimilarComment[],
   availableTokens?: number,
-  driveContents?: DocumentFile[]
+  documents?: DocumentFile[]
 ): Promise<string[]> {
   const { logger } = context;
-  const { tree, tokenLimits } = await buildChatHistoryTree(context, maxDepth, similarComments, similarIssues, driveContents);
+  const { tree, tokenLimits } = await buildChatHistoryTree(context, maxDepth, similarComments, similarIssues, documents);
 
   if (!tree) {
     return ["No main issue found."];

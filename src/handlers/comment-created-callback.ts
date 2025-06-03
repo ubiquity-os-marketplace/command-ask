@@ -1,7 +1,7 @@
+import { extractAttachments, handleDrivePermissions } from "../helpers/drive-link-handler";
 import { Context } from "../types";
 import { CallbackResult } from "../types/proxy";
 import { askQuestion } from "./ask-llm";
-import { handleDrivePermissions } from "../helpers/drive-link-handler";
 
 export async function processCommentCallback(context: Context<"issue_comment.created" | "pull_request_review_comment.created">): Promise<CallbackResult> {
   const { logger, command, payload, config } = context;
@@ -22,12 +22,13 @@ export async function processCommentCallback(context: Context<"issue_comment.cre
   await context.commentHandler.postComment(context, context.logger.ok("Thinking..."), { updateComment: true });
 
   let driveContents;
-  if (config.processDriveLinks) {
+  if (config.processDocumentLinks) {
     const result = await handleDrivePermissions(context, question);
     if (result && !result.hasPermission) {
       return { status: 403, reason: logger.error(result.message || "Drive permission error").logMessage.raw };
     }
-    driveContents = result?.driveContents;
+    const attachmentDocuments = await extractAttachments(context, question);
+    driveContents = [...(result?.driveContents ?? []), ...attachmentDocuments];
   }
 
   // Proceed with question, including drive contents if available

@@ -1,7 +1,10 @@
+import { fileTypeFromBuffer } from "file-type";
+import { lookup as mimeLookup } from "mime-types";
+import ms from "ms";
+import { parseOfficeAsync } from "officeparser";
+import { GoogleDriveClient } from "../adapters/google/helpers/google-drive";
 import { Context } from "../types";
 import { DocumentFile, ParsedDriveLink } from "../types/google";
-import { GoogleDriveClient } from "../adapters/google/helpers/google-drive";
-import ms from "ms";
 
 const POLL_INTERVAL = 25000; // 25 seconds
 const MAX_POLL_TIME = 900000; // 15 minutes
@@ -10,6 +13,58 @@ interface DriveLink {
   url: string;
   data?: ParsedDriveLink;
   requiresPermission: boolean;
+}
+
+export async function extractAttachments(context: Context, question: string) {
+  context.logger.info("Checking for uploaded attachments in the question");
+  const attachmentUrlPattern = /\[([^\]]+)\]\((https:\/\/github\.com\/user-attachments\/files\/[^\s)]+)\)/g;
+  const matches = [...question.matchAll(attachmentUrlPattern)];
+  const attachments = matches.map((match) => ({
+    name: match[1],
+    url: match[2],
+    originalFileName: match[2].split("/").pop(),
+  }));
+
+  if (attachments.length === 0) {
+    context.logger.info("No attachments found in the question");
+    return [];
+  }
+
+  context.logger.info(`Found ${attachments.length} potential attachments`, { attachments });
+  const documents: DocumentFile[] = [];
+  for (const attachment of attachments) {
+    try {
+      const response = await fetch(attachment.url);
+      if (!response.ok) {
+        context.logger.warn(`Failed to fetch attachment [${attachment.url}]: ${response.statusText}`);
+        continue;
+      }
+      const buffer = Buffer.from(await response.arrayBuffer());
+
+      const type = await fileTypeFromBuffer(buffer); // binary types
+      const mimeByExt = mimeLookup(attachment.originalFileName ?? ""); // other types
+      let content: string;
+      if (type && ["docx", "pptx", "xlsx", "odt", "odp", "ods", "pdf"].includes(type.ext)) {
+        content = await parseOfficeAsync(buffer);
+      } else if (mimeByExt && (mimeByExt.startsWith("text/") || ["application/json", "application/xml", "application/csv"].includes(mimeByExt))) {
+        content = buffer.toString("utf-8");
+      } else {
+        context.logger.info(`Unsupported file type for attachment [${attachment.url}]: ${type?.ext || mimeByExt}`);
+        content = "[Unsupported file type]";
+      }
+      documents.push({
+        name: attachment.originalFileName || attachment.name,
+        author: "",
+        content: content,
+        url: attachment.url,
+      });
+    } catch (err) {
+      context.logger.warn(`Error processing attachment [${attachment.url}]`, { err });
+    }
+  }
+
+  context.logger.info(`Extracted ${documents.length} documents from attachments`, { documents });
+  return documents;
 }
 
 /**
@@ -161,6 +216,7 @@ export async function getDriveContents(context: Context, links: DriveLink[]): Pr
         name: match ? `document-${match[1]}` : link.url,
         content: `Content of "${driveContent.metadata.name}":\n${content}`,
         author: driveContent.metadata.owners?.[0]?.displayName || "Unknown",
+        url: link.url,
       });
     } catch (error) {
       context.logger.error(`Failed to fetch content for ${link.url}: ${error}`);
@@ -180,8 +236,8 @@ export async function handleDrivePermissions(
   context.logger.info("Checking for Drive links in the question");
 
   // Check if Drive link processing is enabled in settings
-  if (context.config.processDriveLinks === false) {
-    context.logger.info("Drive link processing is disabled in settings");
+  if (context.config.processDocumentLinks === false) {
+    context.logger.info("Document processing is disabled in settings");
     return;
   }
 
