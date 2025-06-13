@@ -1,4 +1,5 @@
 import { VoyageAIClient } from "voyageai";
+import { retry } from "../../../helpers/retry";
 import { Context } from "../../../types";
 import { SuperVoyage } from "./voyage";
 const VECTOR_SIZE = 1024;
@@ -16,10 +17,14 @@ export class Embedding extends SuperVoyage {
     if (text === null) {
       return new Array(VECTOR_SIZE).fill(0);
     } else {
-      const response = await this.client.embed({
-        input: prompt ? `${prompt} ${text}` : text,
-        model: "voyage-large-2-instruct",
-      });
+      const response = await retry(
+        () =>
+          this.client.embed({
+            input: prompt ? `${prompt} ${text}` : text,
+            model: "voyage-large-2-instruct",
+          }),
+        { maxRetries: this.context.config.maxRetryAttempts }
+      );
       return (response.data && response.data[0]?.embedding) || [];
     }
   }

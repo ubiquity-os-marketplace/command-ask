@@ -1,7 +1,7 @@
+import { Context } from "../types";
 import { FetchParams, LinkedIssues } from "../types/github-types";
-import { logger } from "./errors";
 
-export function splitKey(key: string): [string, string, string] {
+export function splitKey(context: Context, key: string): [string, string, string] {
   try {
     const cleanKey = key.replace(/\/+/g, "/").replace(/\/$/, "");
     const parts = cleanKey.split("/");
@@ -14,7 +14,7 @@ export function splitKey(key: string): [string, string, string] {
     throw new Error("Invalid key format");
   } catch (error) {
     const err = error instanceof Error ? error : new Error(String(error));
-    throw logger.error("Invalid key format", { stack: err.stack });
+    throw context.logger.error("Invalid key format", { stack: err.stack });
   }
 }
 

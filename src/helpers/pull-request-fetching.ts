@@ -1,14 +1,13 @@
 import { Context } from "../types";
 import { FetchParams, PullRequestGraphQlResponse, PullRequestLinkedIssue, SimplifiedComment } from "../types/github-types";
 import { TokenLimits } from "../types/llm";
-import { logger } from "./errors";
 import { processPullRequestDiff } from "./pull-request-parsing";
 
 /**
  * Fetch both PR review comments and regular PR comments
  */
 export async function fetchPullRequestComments(params: FetchParams) {
-  const { octokit } = params.context;
+  const { octokit, logger } = params.context;
   const { owner, repo, issueNum } = params;
 
   try {
@@ -193,9 +192,9 @@ export async function fetchPullRequestDetails(context: Context, org: string, rep
       mediaType: { format: "diff" },
     });
     const diff = diffResponse.data as unknown as string;
-    return processPullRequestDiff(diff, tokenLimits);
+    return processPullRequestDiff(context, diff, tokenLimits);
   } catch (e) {
-    logger.error(`Error fetching PR details`, { owner: org, repo, issue: pullRequestNumber, err: String(e) });
+    context.logger.error(`Error fetching PR details`, { owner: org, repo, issue: pullRequestNumber, err: String(e) });
     return { diff: null };
   }
 }

@@ -1,8 +1,8 @@
 import { VoyageAIClient } from "voyageai";
+import { retry } from "../../../helpers/retry";
 import { Context } from "../../../types";
-import { SimilarIssue, SimilarComment } from "../../../types/github-types";
+import { SimilarComment, SimilarIssue, TreeNode } from "../../../types/github-types";
 import { SuperVoyage } from "./voyage";
-import { TreeNode } from "../../../types/github-types";
 
 interface DocumentWithMetadata {
   document: string;
@@ -43,13 +43,17 @@ export class Rerankers extends SuperVoyage {
     });
 
     // Rerank the documents
-    const response = await this.client.rerank({
-      query,
-      documents: documents.map((doc) => doc.document),
-      model: "rerank-2",
-      returnDocuments: true,
-      topK: Math.min(topK, documents.length),
-    });
+    const response = await retry(
+      () =>
+        this.client.rerank({
+          query,
+          documents: documents.map((doc) => doc.document),
+          model: "rerank-2",
+          returnDocuments: true,
+          topK: Math.min(topK, documents.length),
+        }),
+      { maxRetries: this.context.config.maxRetryAttempts }
+    );
 
     const rerankedResults = response.data || [];
 
@@ -104,13 +108,17 @@ export class Rerankers extends SuperVoyage {
   async reRankResults(results: string[], query: string, topK: number = 5): Promise<string[]> {
     let response;
     try {
-      response = await this.client.rerank({
-        query,
-        documents: results,
-        model: "rerank-2",
-        returnDocuments: true,
-        topK,
-      });
+      response = await retry(
+        () =>
+          this.client.rerank({
+            query,
+            documents: results,
+            model: "rerank-2",
+            returnDocuments: true,
+            topK,
+          }),
+        { maxRetries: this.context.config.maxRetryAttempts }
+      );
     } catch (e: unknown) {
       this.context.logger.error("Reranking failed!", { e });
       return results;
@@ -144,13 +152,17 @@ export class Rerankers extends SuperVoyage {
       }
 
       // Rerank all documents together
-      const response = await this.client.rerank({
-        query,
-        documents: allDocuments.map((doc) => doc.document),
-        model: "rerank-2",
-        returnDocuments: true,
-        topK: Math.min(topK, allDocuments.length),
-      });
+      const response = await retry(
+        () =>
+          this.client.rerank({
+            query,
+            documents: allDocuments.map((doc) => doc.document),
+            model: "rerank-2",
+            returnDocuments: true,
+            topK: Math.min(topK, allDocuments.length),
+          }),
+        { maxRetries: this.context.config.maxRetryAttempts }
+      );
 
       const rerankedResults = response.data || [];
 

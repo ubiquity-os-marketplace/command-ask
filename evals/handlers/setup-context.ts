@@ -1,13 +1,12 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { createAdapters } from "../../src/adapters";
-import { fetchRepoLanguageStats, fetchRepoDependencies } from "../../src/handlers/ground-truths/chat-bot";
-import { findGroundTruths } from "../../src/handlers/ground-truths/find-ground-truths";
-import { logger } from "../../src/helpers/errors";
-import { formatChatHistory } from "../../src/helpers/format-chat-history";
-import { Context } from "../../src/types";
-import { VoyageAIClient } from "voyageai";
 import OpenAI from "openai";
+import { VoyageAIClient } from "voyageai";
+import { createAdapters } from "../../src/adapters";
+import { fetchRepoDependencies, fetchRepoLanguageStats } from "../../src/handlers/ground-truths/chat-bot";
+import { findGroundTruths } from "../../src/handlers/ground-truths/find-ground-truths";
+import { formatChatHistory } from "../../src/helpers/format-chat-history";
 import { fetchSimilarContent } from "../../src/helpers/issue-fetching";
+import { Context } from "../../src/types";
 
 const SEPERATOR = "######################################################\n";
 
@@ -45,6 +44,7 @@ export async function fetchContext(context: Context, question: string): Promise<
       voyage: { reranker },
       openai: { completions },
     },
+    logger,
   } = context;
   // Calculate total available tokens
   const modelMaxTokens = completions.getModelMaxTokenLimit(model);

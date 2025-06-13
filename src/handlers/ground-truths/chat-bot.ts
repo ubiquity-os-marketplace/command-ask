@@ -1,5 +1,4 @@
 import { Context } from "../../types";
-import { logger } from "../../helpers/errors";
 import { RepoLanguages } from "../../types/github-types";
 
 export async function fetchRepoDependencies(context: Context) {
@@ -11,6 +10,7 @@ export async function fetchRepoDependencies(context: Context) {
         name: repo,
       },
     },
+    logger,
   } = context;
 
   try {
@@ -50,6 +50,7 @@ export async function fetchRepoLanguageStats(context: Context) {
         name: repo,
       },
     },
+    logger,
   } = context;
   try {
     const { data: languages } = (await octokit.rest.repos.listLanguages({

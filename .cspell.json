@@ -1,7 +1,20 @@
 {
   "$schema": "https://raw.githubusercontent.com/streetsidesoftware/cspell/main/cspell.schema.json",
   "version": "0.2",
-  "ignorePaths": ["**/*.json", "**/*.css", "node_modules", "**/*.log", "./src/adapters/supabase/**/**.ts", "/supabase/*", "dist/**", "bun.lockb"],
+  "ignorePaths": [
+    "**/*.json",
+    "**/*.css",
+    "node_modules",
+    "**/*.log",
+    "./src/adapters/supabase/**/**.ts",
+    "/supabase/*",
+    "dist/**",
+    "bun.lockb",
+    "**/*.xml",
+    "**/*.xlsx",
+    "**/*.docx",
+    "**/*.pptx"
+  ],
   "useGitignore": true,
   "language": "en",
   "words": [
@@ -46,7 +59,16 @@
     "issuecomment",
     "Limitsnew",
     "evals",
-    "commnt"
+    "commnt",
+    "Retryable",
+    "officeparser",
+    "msword",
+    "openxml",
+    "openxmlformats",
+    "officedocument",
+    "spreadsheetml",
+    "presentationml",
+    "wordprocessingml"
   ],
   "dictionaries": ["typescript", "node", "software-terms"],
   "import": ["@cspell/dict-typescript/cspell-ext.json", "@cspell/dict-node/cspell-ext.json", "@cspell/dict-software-terms"],

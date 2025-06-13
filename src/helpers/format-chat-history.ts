@@ -1,11 +1,10 @@
 import { Context } from "../types";
+import { SimilarComment, SimilarIssue, TreeNode } from "../types/github-types";
+import { DocumentFile } from "../types/google";
 import { TokenLimits } from "../types/llm";
-import { fetchIssueComments } from "./issue-fetching";
 import { splitKey } from "./issue";
-import { logger } from "./errors";
-import { TreeNode } from "../types/github-types";
-import { updateTokenCount, createDefaultTokenLimits } from "./token-utils";
-import { SimilarIssue, SimilarComment } from "../types/github-types";
+import { fetchIssueComments } from "./issue-fetching";
+import { createDefaultTokenLimits, updateTokenCount } from "./token-utils";
 
 const SIMILAR_ISSUE_IDENTIFIER = "Similar Issues:";
 const SIMILAR_COMMENT_IDENTIFIER = "Similar Comments:";
@@ -120,6 +119,7 @@ async function buildTree(
   similarIssues?: SimilarIssue[],
   similarComments?: SimilarComment[]
 ): Promise<{ tree: TreeNode | null }> {
+  const { logger } = context;
   const processedNodes = new Map<string, TreeNode>();
   // Extract issue/PR number based on payload type
   let issueNumber;
@@ -171,7 +171,7 @@ async function buildTree(
     processingStack.add(key);
 
     try {
-      const [owner, repo, issueNum] = splitKey(key);
+      const [owner, repo, issueNum] = splitKey(context, key);
       const response = await fetchIssueComments({ context, owner, repo, issueNum: parseInt(issueNum) }, tokenLimit);
       const issue = response.issue;
 
@@ -282,7 +282,6 @@ async function buildTree(
 
   try {
     const tree = await createNode(mainIssueKey, undefined, similarRefMap);
-    console.log(`Map size: ${JSON.stringify(Array.from(processedNodes.keys()))}`);
     return { tree };
   } catch (error) {
     logger.error("Error building tree", { error: error as Error });
@@ -376,6 +375,30 @@ async function processNodeContent(
 
           tryAddContent(codeLines, testTokenLimits);
         }
+      }
+      output.push("");
+    }
+  }
+
+  // Process document contents for root node if available
+  if (!node.parent && node.documents?.length) {
+    const driveHeader = `${childPrefix}Document Contents:`;
+    if (updateTokenCount(driveHeader, testTokenLimits)) {
+      output.push(driveHeader);
+
+      for (const doc of node.documents) {
+        const authorText = doc.author ? " (by " + doc.author + ")" : "";
+        const urlText = doc.url ? " (" + doc.url + ")" : "";
+        const docHeader = `${childPrefix}├── ${doc.name}${authorText}${urlText}:`;
+        if (!updateTokenCount(docHeader, testTokenLimits)) break;
+        output.push(docHeader);
+
+        const docContent = doc.content
+          .split("\n")
+          .map((line) => `${childPrefix}    ${line.trim()}`)
+          .join("\n");
+        if (!updateTokenCount(docContent, testTokenLimits)) break;
+        output.push(docContent, "");
       }
       output.push("");
     }
@@ -503,17 +526,26 @@ export async function buildChatHistoryTree(
   context: Context,
   maxDepth: number = 2,
   similarComments: SimilarComment[],
-  similarIssues: SimilarIssue[]
+  similarIssues: SimilarIssue[],
+  documents?: DocumentFile[]
 ): Promise<{ tree: TreeNode | null; tokenLimits: TokenLimits }> {
   const specAndBodies: Record<string, string> = {};
   const tokenLimits = createDefaultTokenLimits(context);
   const { tree } = await buildTree(context, specAndBodies, maxDepth, tokenLimits, similarIssues, similarComments);
 
-  if (tree && "pull_request" in context.payload) {
-    const { diff_hunk, position, original_position, path, body } = context.payload.comment || {};
-    if (diff_hunk) {
-      tree.body += `\nPrimary Context: ${body || ""}\nDiff: ${diff_hunk}\nPath: ${path || ""}\nLines: ${position || ""}-${original_position || ""}`;
-      tree.comments = tree.comments?.filter((comment) => comment.id !== String(context.payload.comment?.id));
+  if (tree) {
+    // Add documents to the root node if available
+    if (documents && documents?.length) {
+      tree.documents = documents;
+    }
+
+    // Add pull request specific content
+    if ("pull_request" in context.payload) {
+      const { diff_hunk, position, original_position, path, body } = context.payload.comment || {};
+      if (diff_hunk) {
+        tree.body += `\nPrimary Context: ${body || ""}\nDiff: ${diff_hunk}\nPath: ${path || ""}\nLines: ${position || ""}-${original_position || ""}`;
+        tree.comments = tree.comments?.filter((comment) => comment.id !== String(context.payload.comment?.id));
+      }
     }
   }
 
@@ -525,9 +557,11 @@ export async function formatChatHistory(
   maxDepth: number = 2,
   similarIssues: SimilarIssue[],
   similarComments: SimilarComment[],
-  availableTokens?: number
+  availableTokens?: number,
+  documents?: DocumentFile[]
 ): Promise<string[]> {
-  const { tree, tokenLimits } = await buildChatHistoryTree(context, maxDepth, similarComments, similarIssues);
+  const { logger } = context;
+  const { tree, tokenLimits } = await buildChatHistoryTree(context, maxDepth, similarComments, similarIssues, documents);
 
   if (!tree) {
     return ["No main issue found."];

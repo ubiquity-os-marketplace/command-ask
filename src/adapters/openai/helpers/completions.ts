@@ -1,9 +1,9 @@
-import OpenAI from "openai";
-import { Context } from "../../../types";
-import { SuperOpenAi } from "./openai";
-import { CompletionsModelHelper, ModelApplications } from "../../../types/llm";
 import { encode } from "gpt-tokenizer";
-import { logger } from "../../../helpers/errors";
+import OpenAI from "openai";
+import { retry } from "../../../helpers/retry";
+import { Context } from "../../../types";
+import { CompletionsModelHelper, ModelApplications } from "../../../types/llm";
+import { SuperOpenAi } from "./openai";
 
 export interface CompletionsType {
   answer: string;
@@ -90,41 +90,46 @@ export class Completions extends SuperOpenAi {
   }
 
   async createCompletion(query: string, model: string = "o1-mini", localContext: string[], groundTruths: string[], botName: string): Promise<CompletionsType> {
+    const { logger } = this.context;
     const numTokens = await this.findTokenLength(query, localContext, groundTruths);
     logger.debug(`Number of tokens: ${numTokens}`);
     const sysMsg = this._getSystemPromptTemplate(JSON.stringify(groundTruths), botName, localContext.join("\n"));
     logger.info(`System message: ${sysMsg}`);
 
-    const res: OpenAI.Chat.Completions.ChatCompletion = await this.client.chat.completions.create({
-      model: model,
-      messages: [
-        {
-          role: "system",
-          content: [
+    const res: OpenAI.Chat.Completions.ChatCompletion = await retry(
+      () =>
+        this.client.chat.completions.create({
+          model: model,
+          messages: [
             {
-              type: "text",
-              text: sysMsg,
+              role: "system",
+              content: [
+                {
+                  type: "text",
+                  text: sysMsg,
+                },
+              ],
+            },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: query,
+                },
+              ],
             },
           ],
-        },
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: query,
-            },
-          ],
-        },
-      ],
-      temperature: 0.2,
-      top_p: 0.5,
-      frequency_penalty: 0,
-      presence_penalty: 0,
-      response_format: {
-        type: "text",
-      },
-    });
+          temperature: 0.2,
+          top_p: 0.5,
+          frequency_penalty: 0,
+          presence_penalty: 0,
+          response_format: {
+            type: "text",
+          },
+        }),
+      { maxRetries: this.context.config.maxRetryAttempts }
+    );
 
     if (!res.choices || !res.choices[0].message) {
       logger.error(`Failed to generate completion: ${JSON.stringify(res)}`);

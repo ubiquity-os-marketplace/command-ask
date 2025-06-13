@@ -1,9 +1,10 @@
 import { encode } from "gpt-tokenizer";
-import { TokenLimits } from "../types/llm";
-import { logger } from "./errors";
 import { EncodeOptions } from "gpt-tokenizer/esm/GptEncoding";
+import { Context } from "../types";
+import { TokenLimits } from "../types/llm";
 
-export async function processPullRequestDiff(diff: string, tokenLimits: TokenLimits) {
+export async function processPullRequestDiff(context: Context, diff: string, tokenLimits: TokenLimits) {
+  const { logger } = context;
   // parse the diff into per-file diffs for quicker processing
   const perFileDiffs = parsePerFileDiffs(diff);
 

@@ -1,10 +1,12 @@
-import { Context } from "./types";
-import { createAdapters } from "./adapters";
 import { createClient } from "@supabase/supabase-js";
-import { VoyageAIClient } from "voyageai";
+import { GoogleAuth } from "google-auth-library";
+import { google } from "googleapis";
 import OpenAI from "openai";
-import { callCallbacks } from "./helpers/callback-proxy";
+import { VoyageAIClient } from "voyageai";
+import { createAdapters } from "./adapters";
 import { processCommentCallback } from "./handlers/comment-created-callback";
+import { callCallbacks } from "./helpers/callback-proxy";
+import { Context } from "./types";
 
 export async function plugin(context: Context) {
   const { env, config } = context;
@@ -17,7 +19,23 @@ export async function plugin(context: Context) {
     ...(config.openAiBaseUrl && { baseURL: config.openAiBaseUrl }),
   };
   const openaiClient = new OpenAI(openAiObject);
-  context.adapters = createAdapters(supabase, voyageClient, openaiClient, context);
+  if (config.processDocumentLinks) {
+    const credentials = JSON.parse(env.GOOGLE_SERVICE_ACCOUNT_KEY);
+
+    if (!credentials || typeof credentials !== "object" || !credentials.client_email || !credentials.private_key) {
+      throw context.logger.error("Invalid Google Service Account key. Exiting.");
+    }
+
+    const auth = new GoogleAuth({
+      credentials,
+      scopes: ["https://www.googleapis.com/auth/drive", "https://www.googleapis.com/auth/cloud-platform"],
+    });
+    const drive = google.drive({ version: "v3", auth });
+    context.logger.info("Google Drive API client initialized");
+    context.adapters = createAdapters(supabase, voyageClient, openaiClient, context, drive);
+  } else {
+    context.adapters = createAdapters(supabase, voyageClient, openaiClient, context);
+  }
 
   if (context.command) {
     return await processCommentCallback(context);

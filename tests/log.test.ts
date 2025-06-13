@@ -1,12 +1,8 @@
 import { jest } from "@jest/globals";
-import { Logs } from "@ubiquity-os/ubiquity-os-logger";
+import { createContext } from "./utils";
 
 describe("Log post message test", () => {
   it("Should post a waiting message on start", async () => {
-    const addCommentToIssue = jest.fn();
-    jest.unstable_mockModule("../src/handlers/add-comment", () => ({
-      addCommentToIssue,
-    }));
     jest.unstable_mockModule("../src/handlers/ask-llm", () => ({
       askQuestion: jest.fn(() => ({
         answer: "hello",
@@ -15,22 +11,18 @@ describe("Log post message test", () => {
       })),
     }));
     const { processCommentCallback } = await import("../src/handlers/comment-created-callback");
-    const context = {
-      payload: {
-        comment: {
-          user: {
-            type: "User",
-          },
-          body: "/ask hello",
-        },
-      },
-      logger: new Logs("debug"),
-      env: {
-        UBIQUITY_OS_APP_NAME: "UbiquityOS",
-      },
-    } as never;
-
+    const context = createContext("hello");
+    context.config.processDocumentLinks = false;
     await processCommentCallback(context);
-    expect(addCommentToIssue).toHaveBeenCalledWith(expect.anything(), "UbiquityOS is thinking...");
+    expect(context.commentHandler.postComment).toHaveBeenNthCalledWith(
+      1,
+      expect.anything(),
+      expect.objectContaining({
+        logMessage: expect.objectContaining({
+          raw: expect.stringContaining("Thinking..."),
+        }),
+      }),
+      expect.anything()
+    );
   });
 });

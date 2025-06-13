@@ -1,6 +1,8 @@
-import { logger } from "../../helpers/errors";
+import { Context } from "../../types";
 
-export function validateGroundTruths(truthsString: string | null): string[] {
+export function validateGroundTruths(context: Context, truthsString: string | null): string[] {
+  const { logger } = context;
+
   let truths;
   if (!truthsString) {
     throw logger.error("Failed to generate ground truths");

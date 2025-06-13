@@ -1,16 +1,16 @@
+import { createClient } from "@supabase/supabase-js";
+import { customOctokit as Octokit } from "@ubiquity-os/plugin-sdk/octokit";
+import { LOG_LEVEL, Logs } from "@ubiquity-os/ubiquity-os-logger";
+import { ContextPrecision, Levenshtein } from "autoevals";
 import { Eval } from "braintrust";
-import { Levenshtein, ContextPrecision } from "autoevals";
-import goldResponses from "./data/eval-gold-responses.json";
+import { writeFileSync } from "fs";
 import OpenAI from "openai";
 import { VoyageAIClient } from "voyageai";
-import { createClient } from "@supabase/supabase-js";
 import { createAdapters } from "../src/adapters";
 import { Context } from "../src/types/context";
-import { customOctokit as Octokit } from "@ubiquity-os/plugin-sdk/octokit";
 import issueTemplate from "../tests/__mocks__/issue-template";
-import { writeFileSync } from "fs";
+import goldResponses from "./data/eval-gold-responses.json";
 import { fetchContext, formattedHistory, initAdapters } from "./handlers/setup-context";
-import { LOG_LEVEL, Logs } from "@ubiquity-os/ubiquity-os-logger";
 
 import { config } from "dotenv";
 config();
@@ -23,6 +23,7 @@ const requiredEnvVars = {
   SUPABASE_URL: process.env.SUPABASE_URL as string,
   SUPABASE_KEY: process.env.SUPABASE_KEY as string,
   OPENROUTER_API_KEY: process.env.OPENROUTER_API_KEY as string,
+  GOOGLE_SERVICE_ACCOUNT_KEY: process.env.GOOGLE_SERVICE_ACCOUNT_KEY as string,
 };
 
 // Validate all required env vars are present
@@ -69,6 +70,8 @@ const inputs = {
   config: {
     model: "gpt-4o",
     similarityThreshold: 0.8,
+    maxRetryAttempts: 5,
+    processDocumentLinks: true,
   },
   settings: {
     openAiBaseUrl: "https://openrouter.ai/api/v1",

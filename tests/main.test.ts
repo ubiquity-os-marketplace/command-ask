@@ -1,21 +1,17 @@
-import { db } from "./__mocks__/db";
-import { server } from "./__mocks__/node";
-import usersGet from "./__mocks__/users-get.json";
-import { expect, describe, beforeAll, beforeEach, afterAll, afterEach, it, jest } from "@jest/globals";
-import { Context, SupportedEvents } from "../src/types";
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, jest } from "@jest/globals";
 import { drop } from "@mswjs/data";
-import issueTemplate from "./__mocks__/issue-template";
-import repoTemplate from "./__mocks__/repo-template";
 import { TransformDecodeCheckError, Value } from "@sinclair/typebox/value";
+import { LogReturn } from "@ubiquity-os/ubiquity-os-logger";
+import { http, HttpResponse } from "msw";
 import { envSchema } from "../src/types/env";
-import { CompletionsType } from "../src/adapters/openai/helpers/completions";
-import { logger } from "../src/helpers/errors";
-import { Octokit } from "@octokit/rest";
-import { createKey } from "../src/helpers/issue-fetching";
-import { SimilarComment, SimilarIssue, TreeNode } from "../src/types/github-types";
+import { db } from "./__mocks__/db";
+import issueTemplate from "./__mocks__/issue-template";
+import { server } from "./__mocks__/node";
+import repoTemplate from "./__mocks__/repo-template";
+import usersGet from "./__mocks__/users-get.json";
+import { createContext } from "./utils";
 
-const TEST_QUESTION = "what is pi?";
-const LOG_CALLER = "_Logs.<anonymous>";
+const TEST_QUESTION = "can you check [costs](https://github.com/user-attachments/files/20233948/costs.csv) and tell me the summary?";
 const ISSUE_ID_2_CONTENT = "More context here #2";
 const ISSUE_ID_3_CONTENT = "More context here #3";
 const MOCK_ANSWER = "This is a mock answer for the chat";
@@ -90,22 +86,21 @@ describe("Ask plugin tests", () => {
     expect(() => Value.Decode(envSchema, settings)).toThrow(TransformDecodeCheckError);
   });
 
-  it("should handle PR review comment URLs correctly", () => {
-    const prReviewUrl = "https://github.com/ubiquity/test-repo/pull/123/comments/456";
-    const key = createKey(prReviewUrl);
-    expect(key).toBe("ubiquity/test-repo/123");
-  });
-
   it("should construct the chat history correctly", async () => {
     const ctx = createContext(TEST_QUESTION);
     const debugSpy = jest.spyOn(ctx.logger, "debug");
-    const infoSpy = jest.spyOn(ctx.logger, "info");
     createComments([
       transformCommentTemplate(1, 1, ISSUE_ID_2_CONTENT, "ubiquity", "test-repo", true, "2"),
       transformCommentTemplate(2, 1, TEST_QUESTION, "ubiquity", "test-repo", true, "1"),
       transformCommentTemplate(3, 2, ISSUE_ID_3_CONTENT, "ubiquity", "test-repo", true, "3"),
       transformCommentTemplate(4, 3, "Just a comment", "ubiquity", "test-repo", true, "1"),
     ]);
+
+    server.use(
+      http.get("https://github.com/user-attachments/files/20233948/costs.csv", () => {
+        return HttpResponse.text("5,4,3,2,1\n1,2,3,4,5\n");
+      })
+    );
 
     const issueCommentCreatedCallback = (await import("../src/handlers/comment-created-callback")).processCommentCallback;
     await issueCommentCreatedCallback(ctx);
@@ -120,6 +115,11 @@ describe("Ask plugin tests", () => {
       "Comments: 2",
       `├── issue_comment-2: ubiquity: ${TEST_QUESTION} [#1](${BASE_LINK}1)`,
       `├── issue_comment-1: ubiquity: ${ISSUE_ID_2_CONTENT} [#2](${BASE_LINK}2)`,
+      "",
+      "Document Contents:",
+      "├── costs.csv (https://github.com/user-attachments/files/20233948/costs.csv):",
+      "    5,4,3,2,1",
+      "    1,2,3,4,5",
       "",
       "Similar Issues:",
       "- Issue #2 (" + BASE_LINK + "2) - Similarity: 50.00%",
@@ -149,22 +149,16 @@ describe("Ask plugin tests", () => {
     expect(normalizedReceived).toEqual(normalizedExpected);
 
     // Find the index of the answer log
-    const answerLogIndex = infoSpy.mock.calls.findIndex((call) => (call[0] as string).startsWith("Answer:"));
-
-    expect(infoSpy.mock.calls[answerLogIndex]).toEqual([
-      "Answer: This is a mock answer for the chat",
-      {
-        caller: LOG_CALLER,
-        metadata: {
-          tokenUsage: {
-            input: 1000,
-            output: 150,
-            total: 1150,
-          },
-          groundTruths: ["This is a mock answer for the chat"],
-        },
+    const log = (ctx.commentHandler.postComment as jest.Mock).mock.calls[1][1] as LogReturn;
+    expect(log.logMessage.raw).toEqual(MOCK_ANSWER);
+    expect(log.metadata).toMatchObject({
+      tokenUsage: {
+        input: 1000,
+        output: 150,
+        total: 1150,
       },
-    ]);
+      groundTruths: [MOCK_ANSWER],
+    });
   });
 });
 
@@ -250,197 +244,4 @@ function createComments(comments: Comment[]) {
       ...comment,
     });
   }
-}
-
-function createContext(body = TEST_QUESTION) {
-  const user = db.users.findFirst({ where: { id: { equals: 1 } } });
-  return {
-    payload: {
-      issue: db.issue.findFirst({ where: { id: { equals: 1 } } }) as unknown as Context<"issue_comment.created">["payload"]["issue"],
-      sender: user,
-      repository: db.repo.findFirst({ where: { id: { equals: 1 } } }) as unknown as Context["payload"]["repository"],
-      comment: { body, user: user } as unknown as Context["payload"]["comment"],
-      action: "created" as string,
-      installation: { id: 1 } as unknown as Context["payload"]["installation"],
-      organization: { login: "ubiquity" } as unknown as Context["payload"]["organization"],
-    },
-    command: {
-      name: "ask",
-      parameters: {
-        question: body,
-      },
-    },
-    owner: "ubiquity",
-    repo: "test-repo",
-    logger: logger,
-    config: {
-      maxDepth: 5,
-    },
-    env: {
-      UBIQUITY_OS_APP_NAME: "UbiquityOS",
-      OPENAI_API_KEY: "test",
-      VOYAGEAI_API_KEY: "test",
-      SUPABASE_URL: "test",
-      SUPABASE_KEY: "test",
-    },
-    adapters: {
-      supabase: {
-        issue: {
-          getIssue: async () => {
-            return [
-              {
-                id: "1",
-                markdown: SPEC,
-                plaintext: SPEC,
-                author_id: 1,
-                created_at: new Date().toISOString(),
-                modified_at: new Date().toISOString(),
-                embedding: [1, 2, 3],
-              },
-            ];
-          },
-          findSimilarIssues: async () => {
-            return [
-              {
-                issue_id: "2",
-                issue_plaintext: `${ISSUE_BODY_BASE} #3`,
-                similarity: 0.5,
-              },
-              {
-                issue_id: "3",
-                issue_plaintext: "Some other issue",
-                similarity: 0.3,
-              },
-            ];
-          },
-        },
-        comment: {
-          getComments: async () => {
-            return [
-              {
-                id: "1",
-                plaintext: TEST_QUESTION,
-                markdown: TEST_QUESTION,
-                author_id: 1,
-                created_at: new Date().toISOString(),
-                modified_at: new Date().toISOString(),
-                embedding: [1, 2, 3],
-              },
-              {
-                id: "2",
-                plaintext: ISSUE_ID_2_CONTENT,
-                markdown: ISSUE_ID_2_CONTENT,
-                author_id: 1,
-                created_at: new Date().toISOString(),
-                modified_at: new Date().toISOString(),
-                embedding: [1, 2, 3],
-              },
-              {
-                id: "3",
-                plaintext: ISSUE_ID_3_CONTENT,
-                markdown: ISSUE_ID_3_CONTENT,
-                author_id: 1,
-                created_at: new Date().toISOString(),
-                modified_at: new Date().toISOString(),
-                embedding: [1, 2, 3],
-              },
-              {
-                id: "4",
-                plaintext: "Something new",
-                markdown: "Something new",
-                author_id: 1,
-                created_at: new Date().toISOString(),
-                modified_at: new Date().toISOString(),
-                embedding: [1, 2, 3],
-              },
-            ];
-          },
-          findSimilarComments: async () => {
-            return [
-              {
-                id: "2",
-                plaintext: ISSUE_ID_2_CONTENT,
-                markdown: ISSUE_ID_2_CONTENT,
-                author_id: 1,
-                created_at: new Date().toISOString(),
-                modified_at: new Date().toISOString(),
-                embedding: [1, 2, 3],
-              },
-              {
-                id: "3",
-                plaintext: ISSUE_ID_3_CONTENT,
-                markdown: ISSUE_ID_3_CONTENT,
-                author_id: 1,
-                created_at: new Date().toISOString(),
-                modified_at: new Date().toISOString(),
-                embedding: [1, 2, 3],
-              },
-              {
-                id: "4",
-                plaintext: "New Comment",
-                markdown: "New Comment",
-                author_id: 1,
-                created_at: new Date().toISOString(),
-                modified_at: new Date().toISOString(),
-                embedding: [1, 2, 3],
-              },
-            ];
-          },
-        },
-      },
-      voyage: {
-        embedding: {
-          createEmbedding: async () => {
-            return new Array(1024).fill(0);
-          },
-        },
-        reranker: {
-          reRankResults: async (similarText: string[]) => {
-            return similarText;
-          },
-          reRankSimilarContent: async (similarIssues: SimilarIssue[], similarComments: SimilarComment[]) => {
-            return {
-              similarIssues,
-              similarComments,
-            };
-          },
-          reRankTreeNodes: async (rootNode: TreeNode) => {
-            return rootNode;
-          },
-        },
-      },
-      openai: {
-        completions: {
-          getModelMaxTokenLimit: () => {
-            return 50000;
-          },
-          getModelMaxOutputLimit: () => {
-            return 10000;
-          },
-          createCompletion: async (): Promise<CompletionsType> => {
-            return {
-              answer: MOCK_ANSWER,
-              groundTruths: [MOCK_ANSWER],
-              tokenUsage: {
-                input: 1000,
-                output: 150,
-                total: 1150,
-              },
-            };
-          },
-          getPromptTokens: async (query: string): Promise<number> => {
-            return query ? query.length : 100;
-          },
-          findTokenLength: async () => {
-            return 1000;
-          },
-          createGroundTruthCompletion: async (): Promise<string> => {
-            return `["${MOCK_ANSWER}"]`;
-          },
-        },
-      },
-    },
-    octokit: new Octokit(),
-    eventName: "issue_comment.created" as SupportedEvents,
-  } as unknown as Context;
 }

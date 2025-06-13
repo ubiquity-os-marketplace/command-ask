@@ -1,67 +1,18 @@
 import { Context } from "@ubiquity-os/plugin-sdk";
 import {
+  CommentIssueSearchResult,
   FetchParams,
   Issue,
-  LinkedIssues,
-  SimplifiedComment,
-  SimilarIssue,
-  SimilarComment,
   IssueSearchResult,
-  CommentIssueSearchResult,
+  LinkedIssues,
+  SimilarComment,
+  SimilarIssue,
+  SimplifiedComment,
 } from "../types/github-types";
 import { TokenLimits } from "../types/llm";
-import { logger } from "./errors";
 import { idIssueFromComment } from "./issue";
 import { fetchPullRequestComments, fetchPullRequestDetails } from "./pull-request-fetching";
 import { createDefaultTokenLimits, updateTokenCount } from "./token-utils";
-
-/**
- * Create a unique key for an issue based on its URL and optional issue number
- * @param issueUrl - The URL of the issue
- * @param issue - The optional issue number
- * @returns The unique key for the issue
- */
-export function createKey(issueUrl: string, issue?: number) {
-  const urlParts = issueUrl.split("/");
-
-  let key;
-
-  // Handle PR review comment URLs which have 'pull' and 'comments' in the path
-  if (urlParts.includes("pull") && urlParts.includes("comments")) {
-    // Extract the PR number from the URL
-    const prIndex = urlParts.indexOf("pull");
-    if (prIndex >= 0 && prIndex + 1 < urlParts.length) {
-      const prNumber = urlParts[prIndex + 1];
-      const [, , , issueOrg, issueRepo] = urlParts;
-      key = `${issueOrg}/${issueRepo}/${prNumber}`;
-    }
-  } else if (urlParts.length === 7) {
-    const [, , , issueOrg, issueRepo, , issueNumber] = urlParts;
-    key = `${issueOrg}/${issueRepo}/${issueNumber}`;
-  } else if (urlParts.length === 5) {
-    const [, , issueOrg, issueRepo] = urlParts;
-    key = `${issueOrg}/${issueRepo}/${issue}`;
-  } else if (urlParts.length === 8) {
-    const [, , , issueOrg, issueRepo, , , issueNumber] = urlParts;
-    key = `${issueOrg}/${issueRepo}/${issueNumber || issue}`;
-  } else if (urlParts.length === 3) {
-    const [issueOrg, issueRepo, issueNumber] = urlParts;
-    key = `${issueOrg}/${issueRepo}/${issueNumber || issue}`;
-  }
-
-  if (!key) {
-    throw logger.error("Invalid issue URL", {
-      issueUrl,
-      issueNumber: issue,
-    });
-  }
-
-  if (key.includes("#")) {
-    key = key.split("#")[0];
-  }
-
-  return key;
-}
 
 export async function fetchIssue(params: FetchParams, tokenLimits?: TokenLimits): Promise<Issue | null> {
   const { octokit, payload, logger } = params.context;
