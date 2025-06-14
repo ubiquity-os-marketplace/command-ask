@@ -29,7 +29,7 @@ function validateGitHubKey(key: string): boolean {
 
 function extractGitHubInfo(url: string): { owner: string; repo: string; number: string } | null {
   try {
-    const urlMatch = url.match(/github\.com\/([^/]+)\/([^/]+?)\/(issues|pull)\/(\d+)/);
+    const urlMatch = RegExp(/github\.com\/([^/]+)\/([^/]+?)\/(issues|pull)\/(\d+)/).exec(url);
     if (urlMatch) {
       return {
         owner: urlMatch[1],
@@ -38,7 +38,8 @@ function extractGitHubInfo(url: string): { owner: string; repo: string; number: 
       };
     }
 
-    const repoMatch = url.match(/([^/\s]+)\/([^/\s#]+)#(\d+)/);
+    // eslint-disable-next-line sonarjs/slow-regex
+    const repoMatch = RegExp(/([^/\s]+)\/([^/\s#]+)#(\d+)/).exec(url);
     if (repoMatch) {
       return {
         owner: repoMatch[1],

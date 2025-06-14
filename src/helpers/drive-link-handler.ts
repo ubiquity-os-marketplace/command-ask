@@ -17,6 +17,7 @@ interface DriveLink {
 
 export async function extractAttachments(context: Context, question: string) {
   context.logger.info("Checking for uploaded attachments in the question");
+  // eslint-disable-next-line sonarjs/slow-regex
   const attachmentUrlPattern = /\[([^\]]+)\]\((https:\/\/github\.com\/user-attachments\/files\/[^\s)]+)\)/g;
   const matches = [...question.matchAll(attachmentUrlPattern)];
   const attachments = matches.map((match) => ({
