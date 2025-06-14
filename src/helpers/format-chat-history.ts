@@ -121,7 +121,7 @@ async function buildTree(
 ): Promise<{ tree: TreeNode | null }> {
   const { logger } = context;
   const processedNodes = new Map<string, TreeNode>();
-  // Extract issue/PR number based on payload type
+  // Extract issue/PR number based on the payload type
   let issueNumber;
   if ("issue" in context.payload) {
     issueNumber = context.payload.issue.number;
@@ -454,7 +454,7 @@ async function processTreeNode(node: TreeNode, prefix: string, output: string[],
     return false;
   }
 
-  // Process current node first to ensure most relevant content is included
+  // Process the current node first to ensure the most relevant content is included
   const result = await processNodeContent(node, prefix, false, tokenLimits); // Start without diffs
 
   if (result.isSuccess) {
