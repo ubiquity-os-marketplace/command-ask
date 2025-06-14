@@ -19,7 +19,7 @@ export function splitKey(context: Context, key: string): [string, string, string
 }
 
 function cleanGitHubUrl(url: string): string {
-  let cleanUrl = url;
+  let cleanUrl;
   try {
     cleanUrl = decodeURIComponent(url);
   } catch {
@@ -30,11 +30,26 @@ function cleanGitHubUrl(url: string): string {
   cleanUrl = cleanUrl.replace(/([^:])\/+/g, "$1/");
   cleanUrl = cleanUrl.replace(/\/+$/, "");
   cleanUrl = cleanUrl.replace(/\/issues\/\d+\/issues\/\d+/, (match) => {
-    const number = match.match(/\d+/)?.[0] || "";
+    const number = RegExp(/\d+/).exec(match)?.[0] || "";
     return `/issues/${number}`;
   });
 
   return cleanUrl;
+}
+
+function addIssue(response: LinkedIssues[], seenKeys: Set<string>, owner: string, repo: string, number: string, type: string = "issues"): void {
+  const key = `${owner}/${repo}/${number}`;
+  if (!seenKeys.has(key)) {
+    seenKeys.add(key);
+    response.push({
+      comments: undefined,
+      owner,
+      repo,
+      issueNumber: parseInt(number),
+      url: `https://github.com/${owner}/${repo}/${type}/${number}`,
+      body: undefined,
+    });
+  }
 }
 
 export function idIssueFromComment(comment?: string | null, params?: FetchParams): LinkedIssues[] | null {
@@ -43,114 +58,37 @@ export function idIssueFromComment(comment?: string | null, params?: FetchParams
   const response: LinkedIssues[] = [];
   const seenKeys = new Set<string>();
   const cleanedComment = cleanGitHubUrl(comment);
+  const currentOwner = params.context.payload.repository?.owner?.login;
+  const currentRepo = params.context.payload.repository?.name;
 
-  const urlPattern = /https:\/\/(?:www\.)?github\.com\/([^/\s]+)\/([^/\s]+?)\/(issues|pull)\/(\d+)(?:$|#|\s|])/g;
-  let match;
-  while ((match = urlPattern.exec(cleanedComment)) !== null) {
-    const [_, owner, repo, type, number] = match;
-    const key = `${owner}/${repo}/${number}`;
-    if (!seenKeys.has(key)) {
-      seenKeys.add(key);
-      response.push({
-        owner,
-        repo,
-        issueNumber: parseInt(number),
-        url: `https://github.com/${owner}/${repo}/${type}/${number}`,
-        body: undefined,
-      });
-    }
-  }
+  const patterns = [
+    {
+      regex: /https:\/\/(?:www\.)?github\.com\/([^/\s]+)\/([^/\s]+?)\/(issues|pull)\/(\d+)(?:$|#|\s|])/g,
+      handler: (match: RegExpExecArray) => addIssue(response, seenKeys, match[1], match[2], match[4], match[3]),
+    },
+    {
+      regex: /([^/\s]+)\/([^/#\s]+)#(\d+)(?:$|\s|])/g,
+      handler: (match: RegExpExecArray) => addIssue(response, seenKeys, match[1], match[2], match[3]),
+    },
+    {
+      regex: /(?:^|\s|Resolves\s+|Closes\s+|Fixes\s+|Depends on )#(\d+)(?:$|\s|])/gi,
+      handler: (match: RegExpExecArray) => {
+        if (match[1] === "1234" && cleanedComment.includes("You must link the issue number e.g.")) return;
+        if (currentOwner && currentRepo) addIssue(response, seenKeys, currentOwner, currentRepo, match[1]);
+      },
+    },
+    {
+      regex: /Depends on https:\/\/github\.com\/([^/\s]+)\/([^/\s]+?)\/(issues|pull)\/(\d+)(?:$|\s|])/g,
+      handler: (match: RegExpExecArray) => addIssue(response, seenKeys, match[1], match[2], match[4], match[3]),
+    },
+  ];
 
-  const crossRepoPattern = /([^/\s]+)\/([^/#\s]+)#(\d+)(?:$|\s|])/g;
-  while ((match = crossRepoPattern.exec(cleanedComment)) !== null) {
-    const [_, owner, repo, number] = match;
-    const key = `${owner}/${repo}/${number}`;
-    if (!seenKeys.has(key)) {
-      seenKeys.add(key);
-      response.push({
-        owner,
-        repo,
-        issueNumber: parseInt(number),
-        url: `https://github.com/${owner}/${repo}/issues/${number}`,
-        body: undefined,
-      });
+  patterns.forEach(({ regex, handler }) => {
+    let match;
+    while ((match = regex.exec(cleanedComment)) !== null) {
+      handler(match);
     }
-  }
+  });
 
-  const hashPattern = /(?:^|\s)#(\d+)(?:$|\s|])/g;
-  while ((match = hashPattern.exec(cleanedComment)) !== null) {
-    const [_, number] = match;
-    if (number === "1234" && cleanedComment.includes("You must link the issue number e.g.")) {
-      continue;
-    }
-    const owner = params.context.payload.repository?.owner?.login;
-    const repo = params.context.payload.repository?.name;
-    if (owner && repo) {
-      const key = `${owner}/${repo}/${number}`;
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
-        response.push({
-          owner,
-          repo,
-          issueNumber: parseInt(number),
-          url: `https://github.com/${owner}/${repo}/issues/${number}`,
-          body: undefined,
-        });
-      }
-    }
-  }
-
-  const resolvePattern = /(?:Resolves|Closes|Fixes)\s+#(\d+)(?:$|\s|])/gi;
-  while ((match = resolvePattern.exec(cleanedComment)) !== null) {
-    const [_, number] = match;
-    const owner = params.context.payload.repository?.owner?.login;
-    const repo = params.context.payload.repository?.name;
-    if (owner && repo) {
-      const key = `${owner}/${repo}/${number}`;
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
-        response.push({
-          owner,
-          repo,
-          issueNumber: parseInt(number),
-          url: `https://github.com/${owner}/${repo}/issues/${number}`,
-          body: undefined,
-        });
-      }
-    }
-  }
-
-  const dependsOnPattern = /Depends on (?:(?:#(\d+))|(?:https:\/\/github\.com\/([^/\s]+)\/([^/\s]+?)\/(issues|pull)\/(\d+)))(?:$|\s|])/g;
-  while ((match = dependsOnPattern.exec(cleanedComment)) !== null) {
-    if (match[1]) {
-      const owner = params.context.payload.repository?.owner?.login;
-      const repo = params.context.payload.repository?.name;
-      if (owner && repo) {
-        const key = `${owner}/${repo}/${match[1]}`;
-        if (!seenKeys.has(key)) {
-          seenKeys.add(key);
-          response.push({
-            owner,
-            repo,
-            issueNumber: parseInt(match[1]),
-            url: `https://github.com/${owner}/${repo}/issues/${match[1]}`,
-            body: undefined,
-          });
-        }
-      }
-    } else if (match[2] && match[3] && match[5]) {
-      const key = `${match[2]}/${match[3]}/${match[5]}`;
-      if (!seenKeys.has(key)) {
-        seenKeys.add(key);
-        response.push({
-          owner: match[2],
-          repo: match[3],
-          issueNumber: parseInt(match[5]),
-          url: `https://github.com/${match[2]}/${match[3]}/${match[4]}/${match[5]}`,
-          body: undefined,
-        });
-      }
-    }
-  }
   return response.length > 0 ? response : null;
 }
