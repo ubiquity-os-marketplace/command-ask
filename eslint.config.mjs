@@ -70,6 +70,7 @@ export default tsEslint.config(
       "sonarjs/no-element-overwrite": "error",
       "sonarjs/no-identical-conditions": "error",
       "sonarjs/no-identical-expressions": "error",
+      "sonarjs/slow-regex": "off",
       "@typescript-eslint/naming-convention": [
         "error",
         {

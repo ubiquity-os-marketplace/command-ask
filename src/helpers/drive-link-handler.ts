@@ -17,7 +17,6 @@ interface DriveLink {
 
 export async function extractAttachments(context: Context, question: string) {
   context.logger.info("Checking for uploaded attachments in the question");
-  // eslint-disable-next-line sonarjs/slow-regex
   const attachmentUrlPattern = /\[([^\]]+)\]\((https:\/\/github\.com\/user-attachments\/files\/[^\s)]+)\)/g;
   const matches = [...question.matchAll(attachmentUrlPattern)];
   const attachments = matches.map((match) => ({
@@ -171,6 +170,23 @@ export function formatAccessRequestMessage(context: Context, links: DriveLink[])
   return `I need access to continue. Please share these files with ${serviceAccountEmail}:\n\n${fileList}\n\nI'll wait up to ${ms(MAX_POLL_TIME, { long: true })} for access to be granted.`;
 }
 
+function processStructuredContent(driveContent: ParsedDriveLink): string {
+  if (typeof driveContent.content === "object" && driveContent.content.pages) {
+    return driveContent.content.pages.map((page) => `Page ${page.pageNumber}:\n${page.content || ""}`).join("\n\n");
+  }
+  return "";
+}
+
+function processBase64Content(driveContent: ParsedDriveLink): string {
+  if (driveContent.fileType === "image") {
+    return driveContent.content as string;
+  }
+
+  const contentStr = driveContent.content as string;
+  const FILE_SIZE_KB = Math.round((contentStr.length * 3) / 4 / 1024);
+  return `File "${driveContent.metadata.name}" (${driveContent.fileType}, ${FILE_SIZE_KB}KB)`;
+}
+
 /**
  * Get content from Drive files once access is granted
  */
@@ -193,26 +209,16 @@ export async function getDriveContents(context: Context, links: DriveLink[]): Pr
         continue;
       }
       context.logger.info(`Fetched content for "${driveContent.metadata.name}" with type ${driveContent.fileType}`);
-      let content;
-      if (driveContent.isStructured && typeof driveContent.content === "object" && driveContent.content.pages) {
-        content = driveContent.content.pages
-          .map((page) => {
-            return `Page ${page.pageNumber}:\n${page.content || ""}`;
-          })
-          .join("\n\n");
+      let content: string;
+      if (driveContent.isStructured) {
+        content = processStructuredContent(driveContent);
       } else if (driveContent.isBase64) {
-        if (driveContent.fileType === "image") {
-          content = driveContent.content as string;
-        } else {
-          const contentStr = driveContent.content as string;
-          const FILE_SIZE_KB = Math.round((contentStr.length * 3) / 4 / 1024);
-          content = `File "${driveContent.metadata.name}" (${driveContent.fileType}, ${FILE_SIZE_KB}KB)`;
-        }
-      } else if (typeof driveContent.content === "string") {
-        content = driveContent.content;
+        content = processBase64Content(driveContent);
+      } else {
+        content = driveContent.content as string;
       }
 
-      const match = link.url.match(/\/d\/([^/]+)/);
+      const match = RegExp(/\/d\/([^/]+)/).exec(link.url);
       driveContents.push({
         name: match ? `document-${match[1]}` : link.url,
         content: `Content of "${driveContent.metadata.name}":\n${content}`,

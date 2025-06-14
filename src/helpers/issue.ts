@@ -19,7 +19,7 @@ export function splitKey(context: Context, key: string): [string, string, string
 }
 
 function cleanGitHubUrl(url: string): string {
-  let cleanUrl = url;
+  let cleanUrl;
   try {
     cleanUrl = decodeURIComponent(url);
   } catch {
@@ -30,7 +30,7 @@ function cleanGitHubUrl(url: string): string {
   cleanUrl = cleanUrl.replace(/([^:])\/+/g, "$1/");
   cleanUrl = cleanUrl.replace(/\/+$/, "");
   cleanUrl = cleanUrl.replace(/\/issues\/\d+\/issues\/\d+/, (match) => {
-    const number = match.match(/\d+/)?.[0] || "";
+    const number = RegExp(/\d+/).exec(match)?.[0] || "";
     return `/issues/${number}`;
   });
 
@@ -47,11 +47,12 @@ export function idIssueFromComment(comment?: string | null, params?: FetchParams
   const urlPattern = /https:\/\/(?:www\.)?github\.com\/([^/\s]+)\/([^/\s]+?)\/(issues|pull)\/(\d+)(?:$|#|\s|])/g;
   let match;
   while ((match = urlPattern.exec(cleanedComment)) !== null) {
-    const [_, owner, repo, type, number] = match;
+    const [, owner, repo, type, number] = match;
     const key = `${owner}/${repo}/${number}`;
     if (!seenKeys.has(key)) {
       seenKeys.add(key);
       response.push({
+        comments: undefined,
         owner,
         repo,
         issueNumber: parseInt(number),
@@ -63,11 +64,12 @@ export function idIssueFromComment(comment?: string | null, params?: FetchParams
 
   const crossRepoPattern = /([^/\s]+)\/([^/#\s]+)#(\d+)(?:$|\s|])/g;
   while ((match = crossRepoPattern.exec(cleanedComment)) !== null) {
-    const [_, owner, repo, number] = match;
+    const [, owner, repo, number] = match;
     const key = `${owner}/${repo}/${number}`;
     if (!seenKeys.has(key)) {
       seenKeys.add(key);
       response.push({
+        comments: undefined,
         owner,
         repo,
         issueNumber: parseInt(number),
@@ -79,7 +81,7 @@ export function idIssueFromComment(comment?: string | null, params?: FetchParams
 
   const hashPattern = /(?:^|\s)#(\d+)(?:$|\s|])/g;
   while ((match = hashPattern.exec(cleanedComment)) !== null) {
-    const [_, number] = match;
+    const [, number] = match;
     if (number === "1234" && cleanedComment.includes("You must link the issue number e.g.")) {
       continue;
     }
@@ -90,6 +92,7 @@ export function idIssueFromComment(comment?: string | null, params?: FetchParams
       if (!seenKeys.has(key)) {
         seenKeys.add(key);
         response.push({
+          comments: undefined,
           owner,
           repo,
           issueNumber: parseInt(number),
@@ -102,7 +105,7 @@ export function idIssueFromComment(comment?: string | null, params?: FetchParams
 
   const resolvePattern = /(?:Resolves|Closes|Fixes)\s+#(\d+)(?:$|\s|])/gi;
   while ((match = resolvePattern.exec(cleanedComment)) !== null) {
-    const [_, number] = match;
+    const [, number] = match;
     const owner = params.context.payload.repository?.owner?.login;
     const repo = params.context.payload.repository?.name;
     if (owner && repo) {
@@ -110,6 +113,7 @@ export function idIssueFromComment(comment?: string | null, params?: FetchParams
       if (!seenKeys.has(key)) {
         seenKeys.add(key);
         response.push({
+          comments: undefined,
           owner,
           repo,
           issueNumber: parseInt(number),
@@ -130,6 +134,7 @@ export function idIssueFromComment(comment?: string | null, params?: FetchParams
         if (!seenKeys.has(key)) {
           seenKeys.add(key);
           response.push({
+            comments: undefined,
             owner,
             repo,
             issueNumber: parseInt(match[1]),
@@ -143,6 +148,7 @@ export function idIssueFromComment(comment?: string | null, params?: FetchParams
       if (!seenKeys.has(key)) {
         seenKeys.add(key);
         response.push({
+          comments: undefined,
           owner: match[2],
           repo: match[3],
           issueNumber: parseInt(match[5]),

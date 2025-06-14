@@ -16,11 +16,11 @@ function validateGitHubKey(key: string): boolean {
 
   const [owner, repo, number] = parts;
 
-  if (!owner || owner === "issues" || !/^[a-zA-Z0-9](?:[a-zA-Z0-9.-]*[a-zA-Z0-9])?$/i.test(owner)) {
+  if (!owner || owner === "issues" || !/^[A-Z0-9](?:[A-Z0-9.-]*[A-Z0-9])?$/i.test(owner)) {
     return false;
   }
 
-  if (!repo || !/^[a-zA-Z0-9._-]+$/i.test(repo)) {
+  if (!repo || !/^[A-Z0-9._-]+$/i.test(repo)) {
     return false;
   }
 
@@ -38,7 +38,6 @@ function extractGitHubInfo(url: string): { owner: string; repo: string; number: 
       };
     }
 
-    // eslint-disable-next-line sonarjs/slow-regex
     const repoMatch = RegExp(/([^/\s]+)\/([^/\s#]+)#(\d+)/).exec(url);
     if (repoMatch) {
       return {
@@ -99,7 +98,7 @@ async function extractReferencedIssuesAndPrs(body: string, owner: string, repo: 
 
   const crossRepoMatches = body.match(/([^/\s]+)\/([^/\s#]+)#(\d+)/g) || [];
   for (const ref of crossRepoMatches) {
-    const parts = ref.match(/([^/\s]+)\/([^/\s#]+)#(\d+)/);
+    const parts = RegExp(/([^/\s]+)\/([^/\s#]+)#(\d+)/).exec(ref);
     if (parts) {
       const key = `${parts[1]}/${parts[2]}/${parts[3]}`;
       if (validateGitHubKey(key)) {
