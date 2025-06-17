@@ -28,8 +28,8 @@
         "examples": ["openai/gpt-4o", "openai/o1-mini"],
         "type": "string"
       },
-      "openAiBaseUrl": {
-        "description": "The base URL for the OpenAI API",
+      "openRouterBaseUrl": {
+        "description": "The base URL for the OpenRouter API",
         "examples": ["https://openrouter.ai/api/v1", "https://api.openai.com/v1"],
         "type": "string"
       },
