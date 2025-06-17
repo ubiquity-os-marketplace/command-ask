@@ -15,9 +15,9 @@ export const pluginSettingsSchema = T.Object(
       description: "The LLM model you wish to use",
       examples: ["openai/gpt-4o", "openai/o1-mini"],
     }),
-    openAiBaseUrl: T.Optional(
+    openRouterBaseUrl: T.Optional(
       T.String({
-        description: "The base URL for the OpenAI API",
+        description: "The base URL for the OpenRouter API",
         examples: ["https://openrouter.ai/api/v1", "https://api.openai.com/v1"],
       })
     ),

@@ -55,7 +55,7 @@ export function createContext(body = TEST_QUESTION) {
     },
     env: {
       UBIQUITY_OS_APP_NAME: "UbiquityOS",
-      OPENAI_API_KEY: "test",
+      OPENROUTER_API_KEY: "test",
       VOYAGEAI_API_KEY: "test",
       SUPABASE_URL: "test",
       SUPABASE_KEY: "test",
