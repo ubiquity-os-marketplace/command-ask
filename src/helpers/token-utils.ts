@@ -1,10 +1,13 @@
+import { getOpenRouterModelTokenLimits } from "@ubiquity-os/plugin-sdk/helpers";
+import { encode } from "gpt-tokenizer";
 import { Context } from "../types";
 import { TokenLimits } from "../types/llm";
-import { encode } from "gpt-tokenizer";
 
-export function createDefaultTokenLimits(context: Context): TokenLimits {
-  const modelMaxTokenLimit = context.adapters.openai.completions.getModelMaxTokenLimit(context.config.model);
-  const maxCompletionTokens = context.adapters.openai.completions.getModelMaxOutputLimit(context.config.model);
+export async function getTokenLimits(context: Context): Promise<TokenLimits> {
+  const limits = await getOpenRouterModelTokenLimits(context.config.model);
+  const modelMaxTokenLimit = limits?.contextLength ?? 128_000;
+  const maxCompletionTokens = limits?.maxCompletionTokens ?? 16_384;
+
   return {
     modelMaxTokenLimit,
     maxCompletionTokens,

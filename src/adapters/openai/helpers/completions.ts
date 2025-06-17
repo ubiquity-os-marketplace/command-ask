@@ -1,6 +1,7 @@
+import { retry } from "@ubiquity-os/plugin-sdk/helpers";
 import { encode } from "gpt-tokenizer";
 import OpenAI from "openai";
-import { retry } from "../../../helpers/retry";
+import { checkLlmRetryableState } from "../../../helpers/retry";
 import { Context } from "../../../types";
 import { CompletionsModelHelper, ModelApplications } from "../../../types/llm";
 import { SuperOpenAi } from "./openai";
@@ -21,42 +22,6 @@ export class Completions extends SuperOpenAi {
   constructor(client: OpenAI, context: Context) {
     super(client, context);
     this.context = context;
-  }
-
-  getModelMaxTokenLimit(model: string): number {
-    // could be made more robust, unfortunately, there's no endpoint to get the model token limit
-    const tokenLimits = new Map<string, number>([
-      ["o1-mini", 128_000],
-      ["o1-preview", 128_000],
-      ["gpt-4-turbo", 128_000],
-      ["gpt-4o", 128_000],
-      ["gpt-4o-mini", 128_000],
-      ["gpt-4", 8_192],
-      ["gpt-3.5-turbo-0125", 16_385],
-      ["gpt-3.5-turbo", 16_385],
-    ]);
-
-    return tokenLimits.get(model) || 128_000;
-  }
-
-  getModelMaxOutputLimit(model: string): number {
-    // could be made more robust, unfortunately, there's no endpoint to get the model token limit
-    const tokenLimits = new Map<string, number>([
-      ["o1-mini", 65_536],
-      ["o1-preview", 32_768],
-      ["gpt-4-turbo", 4_096],
-      ["gpt-4o-mini", 16_384],
-      ["gpt-4o", 16_384],
-      ["gpt-4", 8_192],
-      ["gpt-3.5-turbo-0125", 4_096],
-      ["gpt-3.5-turbo", 4_096],
-    ]);
-
-    return tokenLimits.get(model) || 16_384;
-  }
-
-  async getModelTokenLimit(): Promise<number> {
-    return this.getModelMaxTokenLimit("o1-mini");
   }
 
   private _getSystemPromptTemplate(groundTruths: string = "{groundTruths}", botName: string = "{botName}", localContext: string = "{localContext}"): string {
@@ -97,8 +62,8 @@ export class Completions extends SuperOpenAi {
     logger.info(`System message: ${sysMsg}`);
 
     const res: OpenAI.Chat.Completions.ChatCompletion = await retry(
-      () =>
-        this.client.chat.completions.create({
+      async () => {
+        const response = await this.client.chat.completions.create({
           model: model,
           messages: [
             {
@@ -127,14 +92,14 @@ export class Completions extends SuperOpenAi {
           response_format: {
             type: "text",
           },
-        }),
-      { maxRetries: this.context.config.maxRetryAttempts }
+        });
+        if (!response.choices || !response.choices[0].message) {
+          throw logger.error(`Failed to generate completion: ${JSON.stringify(response)}`);
+        }
+        return response;
+      },
+      { maxRetries: this.context.config.maxRetryAttempts, isErrorRetryable: checkLlmRetryableState }
     );
-
-    if (!res.choices || !res.choices[0].message) {
-      logger.error(`Failed to generate completion: ${JSON.stringify(res)}`);
-      return { answer: "", tokenUsage: { input: 0, output: 0, total: 0 }, groundTruths };
-    }
 
     const answer = res.choices[0].message;
     if (answer && answer.content && res.usage) {
@@ -163,21 +128,25 @@ export class Completions extends SuperOpenAi {
       },
     ] as OpenAI.Chat.Completions.ChatCompletionMessageParam[];
 
-    const res = await this.client.chat.completions.create({
-      messages: msgs,
-      model: model,
-    });
-
-    if (!res.choices || !res.choices[0].message || !res.choices[0].message.content) {
-      this.context.logger.error(`Failed to generate ground truth completion: ${JSON.stringify(res)}`);
-      return null;
-    }
+    const res = await retry(
+      async () => {
+        const response = await this.client.chat.completions.create({
+          messages: msgs,
+          model: model,
+        });
+        if (!response.choices || !response.choices[0].message || !response.choices[0].message.content) {
+          throw this.context.logger.error(`Failed to generate ground truth completion: ${JSON.stringify(response)}`);
+        }
+        return response;
+      },
+      { maxRetries: this.context.config.maxRetryAttempts, isErrorRetryable: checkLlmRetryableState }
+    );
 
     return res.choices[0].message.content;
   }
 
   async findTokenLength(prompt: string, additionalContext: string[] = [], localContext: string[] = [], groundTruths: string[] = []): Promise<number> {
-    // disallowedSpecial: new Set() because we pass the entire diff as the prompt we should account for all special characters
+    // disallowedSpecial: new Set() because we pass the entire diff as the prompt, we should account for all special characters
     return encode(prompt + additionalContext.join("\n") + localContext.join("\n") + groundTruths.join("\n"), { disallowedSpecial: new Set() }).length;
   }
 }

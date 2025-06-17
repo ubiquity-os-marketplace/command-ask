@@ -1,5 +1,5 @@
+import { retry } from "@ubiquity-os/plugin-sdk/helpers";
 import { VoyageAIClient } from "voyageai";
-import { retry } from "../../../helpers/retry";
 import { Context } from "../../../types";
 import { SimilarComment, SimilarIssue, TreeNode } from "../../../types/github-types";
 import { SuperVoyage } from "./voyage";
