@@ -13,7 +13,7 @@ import {
 import { TokenLimits } from "../types/llm";
 import { idIssueFromComment } from "./issue";
 import { fetchPullRequestComments, fetchPullRequestDetails } from "./pull-request-fetching";
-import { createDefaultTokenLimits, updateTokenCount } from "./token-utils";
+import { getTokenLimits, updateTokenCount } from "./token-utils";
 
 export async function fetchIssue(params: FetchParams, tokenLimits?: TokenLimits): Promise<Issue | null> {
   const { octokit, payload, logger } = params.context;
@@ -63,7 +63,7 @@ export async function fetchIssue(params: FetchParams, tokenLimits?: TokenLimits)
 
     // If this is a PR, fetch additional details
     if (issue.pull_request) {
-      tokenLimits = tokenLimits || createDefaultTokenLimits(params.context);
+      tokenLimits = tokenLimits || (await getTokenLimits(params.context));
       issue.prDetails = await fetchPullRequestDetails(params.context, targetOwner, targetRepo, targetIssueNum, tokenLimits);
     }
 
@@ -442,7 +442,7 @@ export async function fetchIssueComments(params: FetchParams, tokenLimits?: Toke
   }
 
   const { targetOwner, targetRepo, targetIssueNum } = targetParams;
-  const currentTokenLimits = tokenLimits || createDefaultTokenLimits(params.context);
+  const currentTokenLimits = tokenLimits || (await getTokenLimits(params.context));
 
   const issue = await fetchIssue(
     {

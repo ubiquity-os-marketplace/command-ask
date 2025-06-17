@@ -1,7 +1,8 @@
+import { retry } from "@ubiquity-os/plugin-sdk/helpers";
 import { VoyageAIClient } from "voyageai";
-import { retry } from "../../../helpers/retry";
 import { Context } from "../../../types";
 import { SuperVoyage } from "./voyage";
+
 const VECTOR_SIZE = 1024;
 
 export class Embedding extends SuperVoyage {

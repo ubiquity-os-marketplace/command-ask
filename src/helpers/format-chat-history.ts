@@ -4,7 +4,7 @@ import { DocumentFile } from "../types/google";
 import { TokenLimits } from "../types/llm";
 import { splitKey } from "./issue";
 import { fetchIssueComments } from "./issue-fetching";
-import { createDefaultTokenLimits, updateTokenCount } from "./token-utils";
+import { getTokenLimits, updateTokenCount } from "./token-utils";
 
 const SIMILAR_ISSUE_IDENTIFIER = "Similar Issues:";
 const SIMILAR_COMMENT_IDENTIFIER = "Similar Comments:";
@@ -681,7 +681,7 @@ export async function buildChatHistoryTree(
   documents?: DocumentFile[]
 ): Promise<{ tree: TreeNode | null; tokenLimits: TokenLimits }> {
   const specAndBodies: Record<string, string> = {};
-  const tokenLimits = createDefaultTokenLimits(context);
+  const tokenLimits = await getTokenLimits(context);
   const { tree } = await buildTree(context, specAndBodies, maxDepth, tokenLimits, similarIssues, similarComments);
 
   if (tree) {
@@ -738,7 +738,7 @@ export async function formatChatHistory(
   const headerLine = "Issue Tree Structure:";
   treeOutput.push(headerLine, "");
 
-  const tokenLimitsNew = createDefaultTokenLimits(context);
+  const tokenLimitsNew = await getTokenLimits(context);
 
   const isSuccess = await processTreeNode(reRankedChat, "", treeOutput, tokenLimitsNew);
   logger.debug(`Tree processing ${isSuccess ? "succeeded" : "failed"} with tokens: ${tokenLimitsNew.runningTokenCount}/${tokenLimitsNew.tokensRemaining}`);
