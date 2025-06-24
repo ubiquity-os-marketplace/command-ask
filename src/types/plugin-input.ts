@@ -11,9 +11,9 @@ import { StaticDecode, Type as T } from "@sinclair/typebox";
 export const pluginSettingsSchema = T.Object(
   {
     model: T.String({
-      default: "o1-mini",
+      default: "deepseek/deepseek-chat-v3-0324:free",
       description: "The LLM model you wish to use",
-      examples: ["openai/gpt-4o", "openai/o1-mini"],
+      examples: ["deepseek/deepseek-chat-v3-0324:free", "openai/gpt-4o", "openai/o1-mini"],
     }),
     openRouterBaseUrl: T.Optional(
       T.String({
