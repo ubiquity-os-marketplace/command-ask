@@ -11,7 +11,6 @@ dotenv.config();
  * They are used with `process.env` but are type-safe.
  */
 export const envSchema = T.Object({
-  OPENAI_API_KEY: T.String(),
   UBIQUITY_OS_APP_NAME: T.String({ default: "UbiquityOS" }),
   VOYAGEAI_API_KEY: T.String(),
   SUPABASE_URL: T.String(),

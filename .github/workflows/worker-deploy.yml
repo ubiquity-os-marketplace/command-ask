@@ -45,7 +45,6 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           secrets: |
-            OPENAI_API_KEY
             VOYAGEAI_API_KEY
             UBIQUITY_OS_APP_NAME
             SUPABASE_URL
@@ -53,7 +52,6 @@ jobs:
             GOOGLE_SERVICE_ACCOUNT_KEY
             ${{ secrets.KERNEL_PUBLIC_KEY && secrets.KERNEL_PUBLIC_KEY != '' && 'KERNEL_PUBLIC_KEY' || '' }}
         env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           VOYAGEAI_API_KEY: ${{ secrets.VOYAGEAI_API_KEY }}
           UBIQUITY_OS_APP_NAME: ${{ secrets.UBIQUITY_OS_APP_NAME }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
