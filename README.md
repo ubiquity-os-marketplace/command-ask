@@ -185,7 +185,6 @@ SUPABASE_URL=your_supabase_url
 SUPABASE_KEY=your_supabase_key
 VOYAGEAI_API_KEY=your_voyageai_api_key
 OPENROUTER_API_KEY=your_openrouter_key
-OPENAI_API_KEY=your_openai_key
 GOOGLE_SERVICE_ACCOUNT_KEY=your_service_account_key # Required for Google Drive integration
 UBIQUITY_OS_APP_NAME="UbiquityOS"
 ```
