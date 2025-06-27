@@ -38,7 +38,7 @@ export interface LinkedIssues {
   repo: string;
   owner: string;
   url: string;
-  comments?: SimplifiedComment[] | null | undefined;
+  comments: SimplifiedComment[] | null | undefined;
   body: string | undefined | null;
   prDetails?: PullRequestDetails;
   readme?: string;

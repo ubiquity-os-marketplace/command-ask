@@ -38,7 +38,7 @@ export class GoogleDriveClient extends SuperGoogle {
     ];
 
     for (const pattern of patterns) {
-      const match = url.match(pattern);
+      const match = RegExp(pattern).exec(url);
       if (match && match[1]) {
         return match[1];
       }
