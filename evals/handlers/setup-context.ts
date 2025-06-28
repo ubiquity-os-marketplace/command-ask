@@ -6,6 +6,7 @@ import { fetchRepoDependencies, fetchRepoLanguageStats } from "../../src/handler
 import { findGroundTruths } from "../../src/handlers/ground-truths/find-ground-truths";
 import { formatChatHistory } from "../../src/helpers/format-chat-history";
 import { fetchSimilarContent } from "../../src/helpers/issue-fetching";
+import { getTokenLimits } from "../../src/helpers/token-utils";
 import { Context } from "../../src/types";
 
 const SEPERATOR = "######################################################\n";
@@ -38,7 +39,7 @@ export function initAdapters(context: Context, clients: EvalClients): Context {
 
 export async function fetchContext(context: Context, question: string): Promise<FetchContext> {
   const {
-    config: { similarityThreshold, model, maxDepth },
+    config: { similarityThreshold, maxDepth },
     adapters: {
       supabase: { comment, issue },
       voyage: { reranker },
@@ -47,9 +48,8 @@ export async function fetchContext(context: Context, question: string): Promise<
     logger,
   } = context;
   // Calculate total available tokens
-  const modelMaxTokens = completions.getModelMaxTokenLimit(model);
-  const maxCompletionTokens = completions.getModelMaxOutputLimit(model);
-  let availableTokens = modelMaxTokens - maxCompletionTokens;
+  const { modelMaxTokenLimit, maxCompletionTokens } = await getTokenLimits(context);
+  let availableTokens = modelMaxTokenLimit - maxCompletionTokens;
 
   // Calculate base prompt tokens (system message + query template)
   const basePromptTokens = await completions.getPromptTokens();
