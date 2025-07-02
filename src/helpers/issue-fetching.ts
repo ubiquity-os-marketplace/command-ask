@@ -5,6 +5,7 @@ import {
   Issue,
   IssueSearchResult,
   LinkedIssues,
+  PullRequestLinkedIssue,
   SimilarComment,
   SimilarIssue,
   SimplifiedComment,
@@ -12,13 +13,13 @@ import {
 import { TokenLimits } from "../types/llm";
 import { idIssueFromComment } from "./issue";
 import { fetchPullRequestComments, fetchPullRequestDetails } from "./pull-request-fetching";
-import { createDefaultTokenLimits, updateTokenCount } from "./token-utils";
+import { getTokenLimits, updateTokenCount } from "./token-utils";
 
 export async function fetchIssue(params: FetchParams, tokenLimits?: TokenLimits): Promise<Issue | null> {
   const { octokit, payload, logger } = params.context;
   const { issueNum, owner, repo } = params;
 
-  // Ensure we always have valid owner and repo
+  // Ensure we always have a valid owner and repo
   const targetOwner = owner || payload.repository.owner.login;
   const targetRepo = repo || payload.repository.name;
   // Handle both issue comments and PR review comments
@@ -62,7 +63,7 @@ export async function fetchIssue(params: FetchParams, tokenLimits?: TokenLimits)
 
     // If this is a PR, fetch additional details
     if (issue.pull_request) {
-      tokenLimits = tokenLimits || createDefaultTokenLimits(params.context);
+      tokenLimits = tokenLimits || (await getTokenLimits(params.context));
       issue.prDetails = await fetchPullRequestDetails(params.context, targetOwner, targetRepo, targetIssueNum, tokenLimits);
     }
 
@@ -258,8 +259,8 @@ export async function fetchSimilarContent(
   };
 }
 
-export async function fetchIssueComments(params: FetchParams, tokenLimits?: TokenLimits) {
-  const { octokit, payload, logger } = params.context;
+function getTargetParams(params: FetchParams) {
+  const { payload, logger } = params.context;
   const { issueNum, owner, repo } = params;
 
   const targetOwner = owner || payload.repository.owner.login;
@@ -276,9 +277,172 @@ export async function fetchIssueComments(params: FetchParams, tokenLimits?: Toke
 
   if (!targetIssueNum) {
     logger.error("Could not determine issue/PR number from payload", { payload });
+    return null;
+  }
+
+  return { targetOwner, targetRepo, targetIssueNum };
+}
+
+async function processLinkedIssue(
+  params: FetchParams,
+  linked: LinkedIssues | PullRequestLinkedIssue,
+  currentTokenLimits: TokenLimits
+): Promise<LinkedIssues | null> {
+  const linkedIssue = await fetchIssue(
+    {
+      ...params,
+      owner: linked.owner,
+      repo: linked.repo,
+      issueNum: "issueNumber" in linked ? linked.issueNumber : linked.number,
+    },
+    currentTokenLimits
+  );
+
+  if (!linkedIssue) return null;
+
+  const result: LinkedIssues = {
+    issueNumber: "issueNumber" in linked ? linked.issueNumber : linked.number,
+    owner: linked.owner,
+    repo: linked.repo,
+    url: linkedIssue.html_url,
+    body: linkedIssue.body,
+    comments: undefined,
+  };
+
+  if (linkedIssue.pull_request) {
+    result.prDetails = await fetchPullRequestDetails(
+      params.context,
+      linked.owner,
+      linked.repo,
+      "issueNumber" in linked ? linked.issueNumber : linked.number,
+      currentTokenLimits
+    );
+  }
+
+  return result;
+}
+
+async function fetchPrComments(params: FetchParams, targetOwner: string, targetRepo: string, targetIssueNum: number, currentTokenLimits: TokenLimits) {
+  // For PRs, get both types of comments and linked issues
+  const prData = await fetchPullRequestComments({
+    ...params,
+    owner: targetOwner,
+    repo: targetRepo,
+    issueNum: targetIssueNum,
+  });
+
+  // Update token count
+  updateTokenCount(
+    JSON.stringify(
+      prData.comments.map((comment: SimplifiedComment) => ({
+        id: comment.id,
+        body: comment.body,
+        user: comment.user,
+        ...(comment.referencedCode ? { referencedCode: comment.referencedCode } : {}),
+      }))
+    ),
+    currentTokenLimits
+  );
+
+  const linkedIssues: LinkedIssues[] = [];
+  // Process linked issues from PR with their full content
+  for (const linked of prData.linkedIssues) {
+    // First fetch the issue/PR to determine its type
+    const processedLinked = await processLinkedIssue(params, linked, currentTokenLimits);
+    if (processedLinked) {
+      const linkedComments = await fetchIssueComments(
+        {
+          ...params,
+          owner: linked.owner,
+          repo: linked.repo,
+          issueNum: linked.number,
+          currentDepth: (params.currentDepth || 0) + 1,
+        },
+        currentTokenLimits
+      );
+      processedLinked.comments = linkedComments.comments;
+      linkedIssues.push(processedLinked);
+    }
+  }
+
+  return { comments: prData.comments, linkedIssues };
+}
+
+async function fetchRegularIssueComments(
+  params: FetchParams,
+  targetOwner: string,
+  targetRepo: string,
+  targetIssueNum: number,
+  currentTokenLimits: TokenLimits
+) {
+  const { octokit, logger } = params.context;
+  // For regular issues, get issue comments
+  try {
+    const response = await octokit.rest.issues.listComments({
+      owner: targetOwner,
+      repo: targetRepo,
+      issue_number: targetIssueNum,
+    });
+
+    logger.debug(`Fetched comments for issue #${targetIssueNum}`);
+
+    const comments = response.data
+      .filter((comment): comment is typeof comment & { body: string } => comment.user?.type !== "Bot" && typeof comment.body === "string")
+      .map((comment) => ({
+        body: comment.body,
+        user: comment.user,
+        id: comment.id.toString(),
+        org: targetOwner,
+        repo: targetRepo,
+        issueUrl: comment.html_url,
+        commentType: "issue_comment" as const,
+      }));
+    // Update token count
+    updateTokenCount(
+      JSON.stringify(
+        comments.map((comment: SimplifiedComment) => ({
+          body: comment.body,
+          id: comment.id,
+          user: comment.user,
+        }))
+      ),
+      currentTokenLimits
+    );
+
+    const linkedIssuesFromComments = comments
+      .map((comment) => idIssueFromComment(comment.body, params))
+      .filter((issues): issues is LinkedIssues[] => issues !== null)
+      .flat();
+
+    const linkedIssues: LinkedIssues[] = [];
+    // Process any linked issues found in comments
+    for (const linked of linkedIssuesFromComments) {
+      const processedLinked = await processLinkedIssue(params, linked, currentTokenLimits);
+      if (processedLinked) {
+        linkedIssues.push(processedLinked);
+      }
+    }
+
+    return { comments, linkedIssues };
+  } catch (e) {
+    logger.error(`Error fetching issue comments`, {
+      e,
+      owner: targetOwner,
+      repo: targetRepo,
+      issue_number: targetIssueNum,
+    });
+    return { comments: [], linkedIssues: [] };
+  }
+}
+
+export async function fetchIssueComments(params: FetchParams, tokenLimits?: TokenLimits) {
+  const targetParams = getTargetParams(params);
+  if (!targetParams) {
     return { issue: null, comments: null, linkedIssues: null };
   }
-  const currentTokenLimits = tokenLimits || createDefaultTokenLimits(params.context);
+
+  const { targetOwner, targetRepo, targetIssueNum } = targetParams;
+  const currentTokenLimits = tokenLimits || (await getTokenLimits(params.context));
 
   const issue = await fetchIssue(
     {
@@ -289,149 +453,17 @@ export async function fetchIssueComments(params: FetchParams, tokenLimits?: Toke
     },
     currentTokenLimits
   );
-  logger.debug(`Fetched issue #${targetIssueNum}`);
+
+  params.context.logger.debug(`Fetched issue #${targetIssueNum}`);
 
   if (!issue) {
     return { issue: null, comments: null, linkedIssues: null };
   }
 
-  let comments: SimplifiedComment[] = [];
-  const linkedIssues: LinkedIssues[] = [];
+  const result = issue.pull_request
+    ? await fetchPrComments(params, targetOwner, targetRepo, targetIssueNum, currentTokenLimits)
+    : await fetchRegularIssueComments(params, targetOwner, targetRepo, targetIssueNum, currentTokenLimits);
 
-  if (issue.pull_request) {
-    // For PRs, get both types of comments and linked issues
-    const prData = await fetchPullRequestComments({
-      ...params,
-      owner: targetOwner,
-      repo: targetRepo,
-      issueNum: targetIssueNum,
-    });
-
-    // Update token count
-    updateTokenCount(
-      JSON.stringify(
-        prData.comments.map((comment: SimplifiedComment) => {
-          return {
-            id: comment.id,
-            body: comment.body,
-            user: comment.user,
-            ...(comment.referencedCode ? { referencedCode: comment.referencedCode } : {}),
-          };
-        })
-      ),
-      currentTokenLimits
-    );
-    comments = prData.comments;
-
-    // Process linked issues from PR with their full content
-    for (const linked of prData.linkedIssues) {
-      // First fetch the issue/PR to determine its type
-      const linkedIssue = await fetchIssue(
-        {
-          ...params,
-          owner: linked.owner,
-          repo: linked.repo,
-          issueNum: linked.number,
-        },
-        currentTokenLimits
-      );
-
-      if (linkedIssue) {
-        const linkedComments = await fetchIssueComments(
-          {
-            ...params,
-            owner: linked.owner,
-            repo: linked.repo,
-            issueNum: linked.number,
-            currentDepth: (params.currentDepth || 0) + 1,
-          },
-          currentTokenLimits
-        );
-
-        linkedIssues.push({
-          issueNumber: linked.number,
-          owner: linked.owner,
-          repo: linked.repo,
-          url: linkedIssue.html_url,
-          body: linkedIssue.body,
-          comments: linkedComments.comments,
-          prDetails: linkedIssue.pull_request
-            ? await fetchPullRequestDetails(params.context, linked.owner, linked.repo, linked.number, currentTokenLimits)
-            : undefined,
-        });
-      }
-    }
-  } else {
-    // For regular issues, get issue comments
-    try {
-      const response = await octokit.rest.issues.listComments({
-        owner: targetOwner,
-        repo: targetRepo,
-        issue_number: targetIssueNum,
-      });
-
-      logger.debug(`Fetched comments for issue #${targetIssueNum}`);
-
-      comments = response.data
-        .filter((comment): comment is typeof comment & { body: string } => comment.user?.type !== "Bot" && typeof comment.body === "string")
-        .map((comment) => ({
-          body: comment.body,
-          user: comment.user,
-          id: comment.id.toString(),
-          org: targetOwner,
-          repo: targetRepo,
-          issueUrl: comment.html_url,
-          commentType: "issue_comment",
-        }));
-
-      // Update token count
-      updateTokenCount(
-        JSON.stringify(
-          comments.map((comment: SimplifiedComment) => {
-            return {
-              body: comment.body,
-              id: comment.id,
-              user: comment.user,
-            };
-          })
-        ),
-        currentTokenLimits
-      );
-
-      // Process any linked issues found in comments
-      const linkedIssuesFromComments = comments
-        .map((comment) => idIssueFromComment(comment.body, params))
-        .filter((issues): issues is LinkedIssues[] => issues !== null)
-        .flat();
-
-      for (const linked of linkedIssuesFromComments) {
-        // First fetch the issue/PR to determine its type
-        const linkedIssue = await fetchIssue({
-          ...params,
-          owner: linked.owner,
-          repo: linked.repo,
-          issueNum: linked.issueNumber,
-        });
-
-        if (linkedIssue) {
-          linkedIssues.push({
-            ...linked,
-            body: linkedIssue.body,
-            prDetails: linkedIssue.pull_request
-              ? await fetchPullRequestDetails(params.context, linked.owner, linked.repo, linked.issueNumber, currentTokenLimits)
-              : undefined,
-          });
-        }
-      }
-    } catch (e) {
-      logger.error(`Error fetching issue comments`, {
-        e,
-        owner: targetOwner,
-        repo: targetRepo,
-        issue_number: targetIssueNum,
-      });
-    }
-  }
-  logger.debug(`Processed ${comments.length} comments and ${linkedIssues.length} linked issues`);
-  return { issue, comments, linkedIssues };
+  params.context.logger.debug(`Processed ${result.comments.length} comments and ${result.linkedIssues.length} linked issues`);
+  return { issue, comments: result.comments, linkedIssues: result.linkedIssues };
 }

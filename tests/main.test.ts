@@ -81,7 +81,7 @@ describe("Ask plugin tests", () => {
     expect(res?.answer).toBe(MOCK_ANSWER);
   });
 
-  it("Should throw if OPENAI_API_KEY is not defined", () => {
+  it("Should throw if OPENROUTER_API_KEY is not defined", () => {
     const settings = {};
     expect(() => Value.Decode(envSchema, settings)).toThrow(TransformDecodeCheckError);
   });

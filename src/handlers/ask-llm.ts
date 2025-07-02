@@ -1,6 +1,7 @@
 import { CompletionsType } from "../adapters/openai/helpers/completions";
 import { formatChatHistory } from "../helpers/format-chat-history";
 import { fetchSimilarContent } from "../helpers/issue-fetching";
+import { getTokenLimits } from "../helpers/token-utils";
 import { Context } from "../types";
 import { DocumentFile } from "../types/google";
 import { fetchRepoDependencies, fetchRepoLanguageStats } from "./ground-truths/chat-bot";
@@ -23,9 +24,8 @@ export async function askQuestion(context: Context, question: string, documents?
   } = context;
 
   // Calculate total available tokens
-  const modelMaxTokens = completions.getModelMaxTokenLimit(model);
-  const maxCompletionTokens = completions.getModelMaxOutputLimit(model);
-  let availableTokens = modelMaxTokens - maxCompletionTokens;
+  const { modelMaxTokenLimit, maxCompletionTokens } = await getTokenLimits(context);
+  let availableTokens = modelMaxTokenLimit - maxCompletionTokens;
 
   // Calculate base prompt tokens (system message + query template)
   const basePromptTokens = await completions.getPromptTokens();

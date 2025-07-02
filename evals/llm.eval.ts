@@ -17,7 +17,6 @@ config();
 
 // Required environment variables with type assertion
 const requiredEnvVars = {
-  OPENAI_API_KEY: process.env.OPENAI_API_KEY as string,
   UBIQUITY_OS_APP_NAME: process.env.UBIQUITY_OS_APP_NAME as string,
   VOYAGEAI_API_KEY: process.env.VOYAGEAI_API_KEY as string,
   SUPABASE_URL: process.env.SUPABASE_URL as string,
@@ -74,7 +73,7 @@ const inputs = {
     processDocumentLinks: true,
   },
   settings: {
-    openAiBaseUrl: "https://openrouter.ai/api/v1",
+    openRouterBaseUrl: "https://openrouter.ai/api/v1",
   },
 };
 
@@ -82,8 +81,8 @@ const clients = {
   supabase: createClient(requiredEnvVars.SUPABASE_URL, requiredEnvVars.SUPABASE_KEY),
   voyage: new VoyageAIClient({ apiKey: requiredEnvVars.VOYAGEAI_API_KEY }),
   openai: new OpenAI({
-    apiKey: (inputs.settings.openAiBaseUrl && requiredEnvVars.OPENROUTER_API_KEY) || requiredEnvVars.OPENAI_API_KEY,
-    baseURL: inputs.settings.openAiBaseUrl || undefined,
+    apiKey: requiredEnvVars.OPENROUTER_API_KEY,
+    baseURL: inputs.settings.openRouterBaseUrl || undefined,
   }),
 };
 
@@ -171,7 +170,7 @@ export async function main() {
             context: args.output.context,
             expected: args.expected,
             openAiApiKey: requiredEnvVars.OPENROUTER_API_KEY,
-            openAiBaseUrl: inputs.settings.openAiBaseUrl,
+            openAiBaseUrl: inputs.settings.openRouterBaseUrl,
           }),
       ],
     },

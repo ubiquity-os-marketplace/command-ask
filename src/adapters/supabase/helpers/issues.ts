@@ -25,7 +25,7 @@ export class Issue extends SuperSupabase {
     super(supabase, context);
   }
   async getIssue(issueNodeId: string): Promise<IssueType[] | null> {
-    const { data, error } = await this.supabase.from("issues").select("*").eq("id", issueNodeId).returns<IssueType[]>();
+    const { data, error } = await this.supabase.from("issues").select("*").eq("id", issueNodeId);
     if (error) {
       this.context.logger.error("Error getting issue", { err: error });
       return null;
