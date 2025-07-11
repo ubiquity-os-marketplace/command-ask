@@ -17,7 +17,6 @@ export const pluginSettingsSchema = T.Object(
     }),
     // See https://openrouter.ai/docs/features/model-routing#using-with-openai-sdk
     models: T.Array(T.String(), {
-      minItems: 1,
       description: "Array of LLM models to use as a fallback",
       examples: [["deepseek/deepseek-chat-v3-0324:free", "openai/gpt-4o"], ["deepseek/deepseek-r1-0528:free"]],
       default: [],
