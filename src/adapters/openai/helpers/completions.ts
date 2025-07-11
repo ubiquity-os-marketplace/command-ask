@@ -65,6 +65,8 @@ export class Completions extends SuperOpenAi {
       async () => {
         const response = await this.client.chat.completions.create({
           model: model,
+          // @ts-expect-error This will be passed in the payload to OpenRouter
+          models: this.context.config.models,
           messages: [
             {
               role: "system",
@@ -133,6 +135,8 @@ export class Completions extends SuperOpenAi {
         const response = await this.client.chat.completions.create({
           messages: msgs,
           model: model,
+          // @ts-expect-error This will be passed in the payload to OpenRouter
+          models: this.context.config.models,
         });
         if (!response.choices || !response.choices[0].message || !response.choices[0].message.content) {
           throw this.context.logger.error(`Failed to generate ground truth completion: ${JSON.stringify(response)}`);

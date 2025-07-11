@@ -68,6 +68,7 @@ type EvalOutput = {
 const inputs = {
   config: {
     model: "gpt-4o",
+    models: ["deepseek/deepseek-chat-v3-0324"],
     similarityThreshold: 0.8,
     maxRetryAttempts: 5,
     processDocumentLinks: true,
@@ -145,7 +146,7 @@ export async function main() {
         const chatHistory = await fetchContext(initialContext, scenario.issue.question);
         const result = await initialContext.adapters.openai.completions.createCompletion(
           scenario.issue.question,
-          initialContext.config.model || "gpt-4o",
+          initialContext.config.model,
           chatHistory.formattedChat,
           chatHistory.groundTruths,
           initialContext.env.UBIQUITY_OS_APP_NAME
