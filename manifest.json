@@ -28,6 +28,15 @@
         "examples": ["deepseek/deepseek-chat-v3-0324:free", "openai/gpt-4o", "openai/o1-mini"],
         "type": "string"
       },
+      "models": {
+        "description": "Array of LLM models to use as a fallback",
+        "examples": [["deepseek/deepseek-chat-v3-0324:free", "openai/gpt-4o"], ["deepseek/deepseek-r1-0528:free"]],
+        "default": [],
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
       "openRouterBaseUrl": {
         "description": "The base URL for the OpenRouter API",
         "examples": ["https://openrouter.ai/api/v1", "https://api.openai.com/v1"],
