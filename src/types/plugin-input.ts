@@ -15,6 +15,12 @@ export const pluginSettingsSchema = T.Object(
       description: "The LLM model you wish to use",
       examples: ["deepseek/deepseek-chat-v3-0324:free", "openai/gpt-4o", "openai/o1-mini"],
     }),
+    // See https://openrouter.ai/docs/features/model-routing#using-with-openai-sdk
+    models: T.Array(T.String(), {
+      description: "Array of LLM models to use as a fallback",
+      examples: [["deepseek/deepseek-chat-v3-0324:free", "openai/gpt-4o"], ["deepseek/deepseek-r1-0528:free"]],
+      default: [],
+    }),
     openRouterBaseUrl: T.Optional(
       T.String({
         description: "The base URL for the OpenRouter API",
