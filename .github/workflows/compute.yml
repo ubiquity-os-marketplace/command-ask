@@ -43,7 +43,7 @@ jobs:
           CUSTOM_EVENT_NAME: ${{ inputs.eventName }}
         with:
           mode: "tag"
-          trigger_phrase: "@UbiquityOS|@ubiquityos|\/ask"
+          trigger_phrase: "@UbiquityOS|@ubiquityos|/ask"
           allowed_tools: "Bash(gh issue view:*),Bash(gh pr view:*)"
           github_token: ${{ inputs.authToken }}
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
