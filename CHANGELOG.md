@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.2.1](https://github.com/ubiquity-os-marketplace/command-ask/compare/v1.2.0...v1.2.1) (2025-08-17)
+
+
+### Bug Fixes
+
+* multiple LLM models can be provided for fallback ([8278d53](https://github.com/ubiquity-os-marketplace/command-ask/commit/8278d536d69a0c5354435840e056baac8d59d903))
+* multiple LLM models can be provided for fallback ([5509da1](https://github.com/ubiquity-os-marketplace/command-ask/commit/5509da17d891dfb8469b527b47a6c17296a59fcf))
+* release please issue permission ([9a94e12](https://github.com/ubiquity-os-marketplace/command-ask/commit/9a94e12102d61a53256780cf4b2b3a116100e945))
+* set environment main for main branch and tags ([57b1cfb](https://github.com/ubiquity-os-marketplace/command-ask/commit/57b1cfb8700c29f417fd49b475b9af407628cf17))
+* set environment main for main branch and tags ([8110390](https://github.com/ubiquity-os-marketplace/command-ask/commit/81103908137b602a8ab0c1b8afdefe2cb39c8ff5))
+
 ## [1.2.0](https://github.com/ubiquity-os-marketplace/command-ask/compare/v1.1.0...v1.2.0) (2025-06-13)
 
 
