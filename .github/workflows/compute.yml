@@ -36,7 +36,7 @@ jobs:
           persist-credentials: false
 
       - name: Run Claude Code
-        uses: ubiquity-whilefoo/claude-code-action@custom-event
+        uses: ubiquity-os/claude-code-action@main
         env:
           CUSTOM_EVENT_PAYLOAD: ${{ inputs.eventPayload }}
           CUSTOM_EVENT_NAME: ${{ inputs.eventName }}
