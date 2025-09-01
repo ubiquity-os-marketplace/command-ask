@@ -11,24 +11,13 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20.10.0
+        uses: actions/checkout@v5
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
 
-      - name: Install toolchain
-        run: bun install --frozen-lockfile
-
-      - name: Eslint
-        run: bun run eslint --fix-dry-run
-
       - name: Cspell
-        run: bun run format:cspell
+        run: bunx cspell "**/*"
 
       - name: Prettier
-        run: bun run prettier --check .
+        run: bunx prettier --check .

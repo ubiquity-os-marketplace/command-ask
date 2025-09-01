@@ -28,22 +28,32 @@ jobs:
     environment: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')) && 'main' || 'development' }}
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: setup node
-        uses: actions/setup-node@v4
+      - name: Decompress event payload
+        uses: ubiquity-os/compress-action@main
+        id: eventPayload
         with:
-          node-version: "20.10.0"
+          data: ${{ inputs.eventPayload }}
+          mode: decompress
 
-      - name: execute directive
-        run: node ./dist/index.js
-        id: command-ask
+      - uses: actions/checkout@v5
+        with:
+          token: ${{ inputs.authToken }}
+          repository: ${{ fromJson(steps.eventPayload.outputs.result).repository.full_name }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Run Claude Code
+        uses: ubiquity-os/claude-code-action@main
         env:
-          KERNEL_PUBLIC_KEY: ${{ secrets.KERNEL_PUBLIC_KEY }}
-          PLUGIN_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-          VOYAGEAI_API_KEY: ${{ secrets.VOYAGEAI_API_KEY }}
-          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          UBIQUITY_OS_APP_NAME: ${{ secrets.UBIQUITY_OS_APP_NAME }}
-          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          CUSTOM_EVENT_PAYLOAD: ${{ steps.eventPayload.outputs.result }}
+          CUSTOM_EVENT_NAME: ${{ inputs.eventName }}
+        with:
+          mode: "tag"
+          trigger_phrase: "(@UbiquityOS|@ubiquityos|/ask)"
+          allowed_tools: "Bash(gh issue view:*),Bash(gh pr view:*)"
+          github_token: ${{ inputs.authToken }}
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
+          model: "claude-opus-4-20250514"
+          additional_permissions: |
+            actions: read

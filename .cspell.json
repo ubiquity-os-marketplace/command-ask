@@ -13,7 +13,8 @@
     "**/*.xml",
     "**/*.xlsx",
     "**/*.docx",
-    "**/*.pptx"
+    "**/*.pptx",
+    "CHANGELOG.md"
   ],
   "useGitignore": true,
   "language": "en",
