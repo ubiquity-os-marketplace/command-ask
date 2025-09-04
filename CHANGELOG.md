@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.3.0](https://github.com/ubiquity-os-marketplace/command-ask/compare/v1.2.0...v1.3.0) (2025-09-04)
+
+
+### Features
+
+* change to Claude Code OAuth ([72b2566](https://github.com/ubiquity-os-marketplace/command-ask/commit/72b2566a505712d037b262eae6d0eb3adac459b1))
+* change to Claude Opus ([cfca846](https://github.com/ubiquity-os-marketplace/command-ask/commit/cfca8465ad725f333a19cf57a303533c17c5d7e5))
+* remove configuration and add listener ([42f673c](https://github.com/ubiquity-os-marketplace/command-ask/commit/42f673c3af79476238b20771f9ee482261367fa7))
+* wrap Claude ([1846ce6](https://github.com/ubiquity-os-marketplace/command-ask/commit/1846ce6ad517e254b79deb4a61dbb3cc262bc9af))
+
+
+### Bug Fixes
+
+* add regex ([c7fbe11](https://github.com/ubiquity-os-marketplace/command-ask/commit/c7fbe11df1ed2f27ca6738dce75f03f52dd3645b))
+* bumped SDK ([30fbd9c](https://github.com/ubiquity-os-marketplace/command-ask/commit/30fbd9cbf71e0e71b36c592a84c49180d7a3451d))
+* bumped SDK ([fd0e400](https://github.com/ubiquity-os-marketplace/command-ask/commit/fd0e400fd3055b91e55b0d71346adb5205c7dd05))
+* decompress event payload ([858c2cf](https://github.com/ubiquity-os-marketplace/command-ask/commit/858c2cf123aac30ff34e031da40ebeda45eae0ff))
+* multiple LLM models can be provided for fallback ([8278d53](https://github.com/ubiquity-os-marketplace/command-ask/commit/8278d536d69a0c5354435840e056baac8d59d903))
+* multiple LLM models can be provided for fallback ([5509da1](https://github.com/ubiquity-os-marketplace/command-ask/commit/5509da17d891dfb8469b527b47a6c17296a59fcf))
+* release please issue permission ([9a94e12](https://github.com/ubiquity-os-marketplace/command-ask/commit/9a94e12102d61a53256780cf4b2b3a116100e945))
+* set environment main for main branch and tags ([57b1cfb](https://github.com/ubiquity-os-marketplace/command-ask/commit/57b1cfb8700c29f417fd49b475b9af407628cf17))
+* set environment main for main branch and tags ([8110390](https://github.com/ubiquity-os-marketplace/command-ask/commit/81103908137b602a8ab0c1b8afdefe2cb39c8ff5))
+* trigger phrase ([2ab31bf](https://github.com/ubiquity-os-marketplace/command-ask/commit/2ab31bfcdd7508a683091253761439be8062c743))
+* trigger phrase ([2a3a05f](https://github.com/ubiquity-os-marketplace/command-ask/commit/2a3a05f209b3c33cc0ae9b319b982b65d49e574e))
+* trigger phrase ([4662f2b](https://github.com/ubiquity-os-marketplace/command-ask/commit/4662f2bc81f49b6089568d6394159b74ee8de056))
+
 ## [1.2.0](https://github.com/ubiquity-os-marketplace/command-ask/compare/v1.1.0...v1.2.0) (2025-06-13)
 
 
