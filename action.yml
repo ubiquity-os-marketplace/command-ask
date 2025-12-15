@@ -1,0 +1,61 @@
+name: "@ubiquity-os-marketplace/command-ask"
+description: "Ask questions about issues and pull requests using Claude Code."
+
+inputs:
+  stateId:
+    description: "State Id"
+    required: true
+  eventName:
+    description: "Event Name"
+    required: true
+  eventPayload:
+    description: "Event Payload"
+    required: true
+  settings:
+    description: "Settings"
+    required: true
+  authToken:
+    description: "Auth Token"
+    required: true
+  ref:
+    description: "Ref"
+    required: false
+  signature:
+    description: "Signature sent from the Kernel"
+    required: true
+  command:
+    description: "Command"
+    required: false
+
+runs:
+  using: "composite"
+  steps:
+    - name: Decompress event payload
+      uses: ubiquity-os/compress-action@main
+      id: eventPayload
+      with:
+        data: ${{ inputs.eventPayload }}
+        mode: decompress
+
+    - uses: actions/checkout@v5
+      with:
+        token: ${{ inputs.authToken }}
+        repository: ${{ fromJson(steps.eventPayload.outputs.result).repository.full_name }}
+        fetch-depth: 0
+        persist-credentials: false
+
+    - name: Run Claude Code
+      uses: ubiquity-os/claude-code-action@main
+      env:
+        CUSTOM_EVENT_PAYLOAD: ${{ steps.eventPayload.outputs.result }}
+        CUSTOM_EVENT_NAME: ${{ inputs.eventName }}
+      with:
+        mode: "tag"
+        trigger_phrase: "(@UbiquityOS|@ubiquityos|/ask)"
+        allowed_tools: "Bash(gh issue view:*),Bash(gh pr view:*)"
+        github_token: ${{ inputs.authToken }}
+        claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        # Optional: Specify model (defaults to Claude Sonnet 4, uncomment for Claude Opus 4)
+        model: "claude-opus-4-20250514"
+        additional_permissions: |
+          actions: read
